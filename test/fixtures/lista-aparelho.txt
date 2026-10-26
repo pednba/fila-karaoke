@@ -1,0 +1,17 @@
+Karaoke Locacoes Exemplo    12345   ALUGUE JA     Ligue agora mesmo     BRA
+
+                    LISTA DE MUSICAS - APARELHO DE KARAOKE
+                    Ordem alfabetica por interprete
+Interprete               Cod     Titulo                         Inicio da letra                  Idioma
+Banda Exemplo            4574    DANCA DA NOITE                 Vem dancar comigo ate o sol      EUA
+Cantor Ficticio          9380    ACENDA A LUZ Acenda a luz do meu caminho                        BRA
+Dupla Imaginaria         1234    JOSÉ E agora, José, a festa acabou                              BRA
+                                 EU SEI QUE VOU
+Fulano de Tal            5555                                   Eu sei que vou te amar           BRA
+                                 TE AMAR
+Pagina 1 de 2
+LISTA DE MUSICAS - APARELHO DE KARAOKE
+Interprete               Cod     Titulo                         Inicio da letra                  Idioma
+Grupo Oriental           20001   SAKURA NO UTA                  Haru no hi ni                    JAP
+Artista Sem Letra        777     SO O TITULO                                                     BRA
+Total de musicas listadas 6

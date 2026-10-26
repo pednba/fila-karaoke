@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Karaokê da Helena: convidado</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Great+Vibes&amp;family=Montserrat:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;font-family:Montserrat,system-ui,sans-serif}
+a{color:#7C5A12}a:hover{color:#1A1611}
+input::placeholder{color:#8C7D63}
+button{font-family:inherit;cursor:pointer}
+button:disabled{cursor:default}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; display: flex; flex-direction: column; background: #F7F0E1; color: #1A1611; font-family: Montserrat, system-ui, sans-serif; overflow: hidden; box-sizing: border-box; border: 1px solid #D9C28A;">
+
+<sc-if value="{{ semNome }}" hint-placeholder-val="{{ false }}">
+<div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 32px; gap: 20px; text-align: center; box-sizing: border-box; margin: 14px; border: 1px solid #C49A3C;">
+<p style="margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.22em; color: #1A1611;">KARAOKÊ DE ANIVERSÁRIO</p>
+<div style="width: 220px; height: 220px; border-radius: 50%; border: 1.5px solid #C49A3C; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;">
+<span style="font-family: 'Great Vibes', cursive; font-size: 68px; line-height: 1; color: #1A1611;">Helena</span>
+<span style="font-size: 30px; font-weight: 700; letter-spacing: 0.02em;">45 <span style="font-size: 18px; font-weight: 600; letter-spacing: 0.08em;">ANOS</span></span>
+</div>
+<div style="display: flex; align-items: center; gap: 10px; width: 100%;">
+<span style="flex: 1; height: 1px; background: #C49A3C;"></span>
+<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="#1A1611"></path></svg>
+<span style="flex: 1; height: 1px; background: #C49A3C;"></span>
+</div>
+<p style="margin: 0; font-family: 'Great Vibes', cursive; font-size: 30px; line-height: 1.15;">Escolha sua música e entre na fila!</p>
+<div style="width: 100%; display: flex; flex-direction: column; gap: 8px; text-align: left;">
+<label for="nome" style="font-size: 12px; font-weight: 600; letter-spacing: 0.14em; color: #6B5D45;">COMO VOCÊ QUER APARECER NA FILA?</label>
+<input id="nome" value="{{ nomeInput }}" onChange="{{ onNome }}" placeholder="Seu nome ou apelido" style="height: 52px; border: 1px solid #C49A3C; border-radius: 12px; background: #FFFBF2; padding: 0 16px; font-size: 17px; font-family: Montserrat, sans-serif; color: #1A1611; outline: none;">
+<sc-if value="{{ erroNome }}" hint-placeholder-val="{{ false }}">
+<span style="font-size: 13px; color: #A12A1E;">Digite um nome para continuar</span>
+</sc-if>
+</div>
+<button type="button" onClick="{{ entrar }}" style="width: 100%; height: 54px; border-radius: 12px; border: 1px solid #C49A3C; background: #1A1611; color: #F7F0E1; font-size: 15px; font-weight: 600; letter-spacing: 0.14em;">ENTRAR NA FESTA</button>
+<p style="margin: 0; font-size: 12px; color: #6B5D45;">Seu nome fica salvo neste celular.</p>
+</div>
+</sc-if>
+
+<sc-if value="{{ comNome }}" hint-placeholder-val="{{ true }}">
+<header style="padding: 14px 20px 10px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #E3D5B5; background: #F7F0E1;">
+<div style="display: flex; flex-direction: column; gap: 0;">
+<span style="font-size: 10px; font-weight: 600; letter-spacing: 0.24em; color: #6B5D45;">KARAOKÊ DA</span>
+<span style="font-family: 'Great Vibes', cursive; font-size: 38px; line-height: 1; color: #1A1611;">Helena <span style="font-family: Montserrat, sans-serif; font-size: 15px; font-weight: 700; letter-spacing: 0.04em;">45</span></span>
+</div>
+<div style="display: flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid #C49A3C; border-radius: 999px; background: #FFFBF2;">
+<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="#C49A3C"></path></svg>
+<span style="font-size: 13px; font-weight: 600;">{{ me }}</span>
+</div>
+</header>
+
+<main style="flex: 1; overflow-y: auto; padding: 16px 16px 96px; display: flex; flex-direction: column; gap: 18px; box-sizing: border-box;">
+
+<sc-if value="{{ tabFila }}" hint-placeholder-val="{{ true }}">
+<section aria-label="Música da vez" style="background: #16130F; border: 1px solid #C49A3C; border-radius: 18px; padding: 18px 18px 16px; display: flex; flex-direction: column; gap: 10px; color: #F7F0E1;">
+<div style="display: flex; align-items: center; gap: 10px;">
+<span style="flex: 1; height: 1px; background: #8C6B24;"></span>
+<span style="font-size: 11px; font-weight: 600; letter-spacing: 0.24em; color: #D9B45A;">AGORA NO PALCO</span>
+<span style="flex: 1; height: 1px; background: #8C6B24;"></span>
+</div>
+<sc-if value="{{ temAtual }}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 12px;">
+<div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+<span style="font-size: 20px; font-weight: 700; line-height: 1.2;">{{ atual.titulo }}</span>
+<span style="font-size: 14px; color: #CFC4AE;">{{ atual.artista }}</span>
+</div>
+<div style="display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0;">
+<span style="font-size: 10px; letter-spacing: 0.16em; color: #CFC4AE;">CÓDIGO</span>
+<span style="font-size: 34px; font-weight: 700; color: #D9B45A; font-variant-numeric: tabular-nums; line-height: 1.05;">{{ atual.cod }}</span>
+</div>
+</div>
+<div style="display: flex; align-items: center; gap: 8px; padding-top: 10px; border-top: 1px solid #3A3226;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D9B45A" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path></svg>
+<span style="font-family: 'Great Vibes', cursive; font-size: 30px; line-height: 1;">{{ atual.p }}</span>
+</div>
+<sc-if value="{{ minhaVez }}" hint-placeholder-val="{{ false }}">
+<div style="background: #F7F0E1; color: #1A1611; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; text-align: center;">
+<span style="font-size: 12px; font-weight: 600; letter-spacing: 0.18em;">É A SUA VEZ!</span>
+<span style="font-family: 'Great Vibes', cursive; font-size: 32px; line-height: 1;">Cantou?</span>
+<button type="button" onClick="{{ cantou }}" style="height: 48px; border-radius: 10px; border: 1px solid #C49A3C; background: #1A1611; color: #F7F0E1; font-size: 14px; font-weight: 600; letter-spacing: 0.12em;">SIM, JÁ CANTEI</button>
+</div>
+</sc-if>
+</sc-if>
+<sc-if value="{{ semAtual }}" hint-placeholder-val="{{ false }}">
+<p style="margin: 6px 0; text-align: center; font-family: 'Great Vibes', cursive; font-size: 28px;">O palco está livre!</p>
+</sc-if>
+</section>
+
+<sc-if value="{{ va.mostrar }}" hint-placeholder-val="{{ true }}">
+<section aria-label="Nota da festa: performance atual" style="background: #FFFBF2; border: 1px solid #C49A3C; border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; align-items: center; gap: 10px;">
+<span style="flex: 1; height: 1px; background: #C49A3C;"></span>
+<svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="#1A1611"></path></svg>
+<span style="font-size: 11px; font-weight: 600; letter-spacing: 0.24em;">NOTA DA FESTA</span>
+<svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="#1A1611"></path></svg>
+<span style="flex: 1; height: 1px; background: #C49A3C;"></span>
+</div>
+<p style="margin: 0; text-align: center; font-size: 15px; line-height: 1.4;">Quanto vale a performance de <span style="font-family: 'Great Vibes', cursive; font-size: 26px;">{{ va.nome }}</span>?</p>
+<div role="group" aria-label="Nota de 0 a 10" style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px;">
+<sc-for list="{{ va.notas }}" as="n" hint-placeholder-count="11">
+<button type="button" onClick="{{ n.pick }}" aria-pressed="{{ n.pressed }}" aria-label="{{ n.aria }}" style="{{ n.style }}">{{ n.n }}</button>
+</sc-for>
+</div>
+<span style="font-size: 12px; color: #6B5D45; text-align: center;">{{ va.rodape }}</span>
+</section>
+</sc-if>
+
+<sc-if value="{{ vu.mostrar }}" hint-placeholder-val="{{ false }}">
+<section aria-label="Nota da festa: performance anterior" style="background: transparent; border: 1px dashed #C49A3C; border-radius: 18px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;">
+<p style="margin: 0; font-size: 13px; line-height: 1.4;"><span style="font-weight: 600; letter-spacing: 0.12em; font-size: 11px;">AINDA DÁ TEMPO DE VOTAR</span><br>{{ vu.nome }} · {{ vu.titulo }}</p>
+<div role="group" aria-label="Nota de 0 a 10" style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px;">
+<sc-for list="{{ vu.notas }}" as="n" hint-placeholder-count="11">
+<button type="button" onClick="{{ n.pick }}" aria-pressed="{{ n.pressed }}" aria-label="{{ n.aria }}" style="{{ n.style }}">{{ n.n }}</button>
+</sc-for>
+</div>
+<span style="font-size: 12px; color: #6B5D45;">{{ vu.rodape }}</span>
+</section>
+</sc-if>
+
+<section aria-label="Próximos cantores" style="display: flex; flex-direction: column; gap: 8px;">
+<div style="display: flex; align-items: center; justify-content: space-between;">
+<h2 style="margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.2em;">PRÓXIMOS 10</h2>
+<span style="font-size: 12px; color: #6B5D45;">{{ totalFila }} na fila</span>
+</div>
+<sc-for list="{{ proximos }}" as="item" hint-placeholder-count="6">
+<div style="{{ item.rowStyle }}">
+<span style="width: 28px; height: 28px; flex-shrink: 0; border-radius: 50%; border: 1px solid #C49A3C; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600;">{{ item.pos }}</span>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;">
+<span style="font-size: 15px; font-weight: 600;">{{ item.nome }}</span>
+<span style="font-size: 12px; color: #6B5D45; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ item.musica }}</span>
+</div>
+<sc-if value="{{ item.meu }}" hint-placeholder-val="{{ false }}">
+<span style="font-size: 11px; font-weight: 600; letter-spacing: 0.1em; color: #F7F0E1; background: #1A1611; padding: 4px 8px; border-radius: 999px;">VOCÊ</span>
+</sc-if>
+</div>
+</sc-for>
+</section>
+</sc-if>
+
+<sc-if value="{{ tabBusca }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 12px;">
+<label for="busca" style="font-size: 13px; font-weight: 600; letter-spacing: 0.2em;">BUSCAR MÚSICA</label>
+<div style="display: flex; align-items: center; gap: 10px; height: 50px; padding: 0 14px; border: 1px solid #C49A3C; border-radius: 12px; background: #FFFBF2;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B5D45" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+<input id="busca" value="{{ q }}" onChange="{{ onQ }}" placeholder="Música, artista ou trecho da letra" style="flex: 1; border: 0; background: transparent; font-size: 16px; font-family: Montserrat, sans-serif; color: #1A1611; outline: none; min-width: 0;">
+</div>
+<div style="display: flex; gap: 8px;">
+<sc-for list="{{ filtros }}" as="f" hint-placeholder-count="3">
+<button type="button" onClick="{{ f.pick }}" aria-pressed="{{ f.pressed }}" style="{{ f.style }}">{{ f.label }}</button>
+</sc-for>
+</div>
+<sc-if value="{{ limiteAtingido }}" hint-placeholder-val="{{ false }}">
+<p style="margin: 0; padding: 10px 12px; border-radius: 10px; background: #EFE2C2; font-size: 13px; color: #1A1611;">Você já tem 3 músicas na fila. Cancele uma em Meus pedidos para pedir outra.</p>
+</sc-if>
+<span style="font-size: 12px; color: #6B5D45;">{{ resumoBusca }}</span>
+<sc-for list="{{ resultados }}" as="s" hint-placeholder-count="5">
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: #FFFBF2; border: 1px solid #E3D5B5; border-radius: 12px;">
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+<span style="font-size: 15px; font-weight: 600;">{{ s.titulo }}</span>
+<span style="font-size: 13px; color: #6B5D45;">{{ s.artista }} · cód. {{ s.cod }}</span>
+<span style="font-size: 12px; color: #6B5D45; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">“{{ s.inicio }}”</span>
+</div>
+<button type="button" onClick="{{ s.pedir }}" disabled="{{ s.bloq }}" aria-label="{{ s.aria }}" style="{{ s.btnStyle }}">{{ s.btn }}</button>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ tabMeus }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; align-items: center; justify-content: space-between;">
+<h2 style="margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.2em;">MEUS PEDIDOS</h2>
+<span style="font-size: 12px; color: #6B5D45;">{{ meusCount }} de 3</span>
+</div>
+<sc-if value="{{ semMeus }}" hint-placeholder-val="{{ false }}">
+<div style="padding: 28px 16px; text-align: center; border: 1px dashed #C49A3C; border-radius: 14px; display: flex; flex-direction: column; gap: 12px; align-items: center;">
+<span style="font-family: 'Great Vibes', cursive; font-size: 30px;">Nenhuma música na fila</span>
+<button type="button" onClick="{{ irBusca }}" style="height: 44px; padding: 0 18px; border-radius: 10px; border: 1px solid #C49A3C; background: #1A1611; color: #F7F0E1; font-size: 13px; font-weight: 600; letter-spacing: 0.12em;">ESCOLHER MÚSICA</button>
+</div>
+</sc-if>
+<sc-for list="{{ meus }}" as="m" hint-placeholder-count="2">
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: #FFFBF2; border: 1px solid #E3D5B5; border-radius: 12px;">
+<div style="width: 48px; flex-shrink: 0; text-align: center; display: flex; flex-direction: column;">
+<span style="font-size: 20px; font-weight: 700;">{{ m.posLabel }}</span>
+<span style="font-size: 10px; color: #6B5D45;">{{ m.espera }}</span>
+</div>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+<span style="font-size: 15px; font-weight: 600;">{{ m.titulo }}</span>
+<span style="font-size: 12px; color: #6B5D45;">{{ m.artista }} · cód. {{ m.cod }}</span>
+</div>
+<button type="button" onClick="{{ m.cancelar }}" aria-label="{{ m.aria }}" style="height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid #C9B48A; background: transparent; color: #7A2A1E; font-size: 12px; font-weight: 600;">Cancelar</button>
+</div>
+</sc-for>
+<sc-if value="{{ temCantadas }}" hint-placeholder-val="{{ false }}">
+<h2 style="margin: 8px 0 0; font-size: 13px; font-weight: 600; letter-spacing: 0.2em;">JÁ CANTEI</h2>
+<sc-for list="{{ cantadas }}" as="c" hint-placeholder-count="1">
+<div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid #E3D5B5;">
+<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="#C49A3C"></path></svg>
+<span style="font-size: 14px;">{{ c.titulo }} · <span style="color: #6B5D45;">{{ c.artista }}</span></span>
+</div>
+</sc-for>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ tabNota }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 10px;">
+<div style="text-align: center; display: flex; flex-direction: column; align-items: center; gap: 2px; padding-bottom: 4px;">
+<span style="font-size: 11px; font-weight: 600; letter-spacing: 0.24em;">NOTA DA FESTA</span>
+<span style="font-family: 'Great Vibes', cursive; font-size: 44px; line-height: 1.1;">Ranking</span>
+<div style="display: flex; align-items: center; gap: 10px; width: 100%;">
+<span style="flex: 1; height: 1px; background: #C49A3C;"></span>
+<svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="#1A1611"></path></svg>
+<span style="flex: 1; height: 1px; background: #C49A3C;"></span>
+</div>
+<span style="font-size: 12px; color: #6B5D45; padding-top: 4px;">{{ legenda }}</span>
+</div>
+<div role="group" aria-label="Tipo de ranking" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 4px; border: 1px solid #C49A3C; border-radius: 12px; background: #FFFBF2;">
+<sc-for list="{{ modos }}" as="md" hint-placeholder-count="2">
+<button type="button" onClick="{{ md.pick }}" aria-pressed="{{ md.pressed }}" style="{{ md.style }}">{{ md.label }}</button>
+</sc-for>
+</div>
+<sc-if value="{{ semRanking }}" hint-placeholder-val="{{ false }}">
+<p style="margin: 0; padding: 24px; text-align: center; font-family: 'Great Vibes', cursive; font-size: 28px;">Nenhuma votação fechada ainda</p>
+</sc-if>
+<sc-for list="{{ rankingVis }}" as="r" hint-placeholder-count="3">
+<div style="{{ r.cardStyle }}">
+<span style="{{ r.posStyle }}">{{ r.pos }}</span>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+<span style="font-family: 'Great Vibes', cursive; font-size: 28px; line-height: 1;">{{ r.nome }}</span>
+<span style="{{ r.subStyle }}">{{ r.musica }}</span>
+</div>
+<div style="display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0;">
+<span style="{{ r.notaStyle }}">{{ r.nota }}</span>
+<span style="{{ r.subStyle }}">{{ r.votos }}</span>
+</div>
+</div>
+</sc-for>
+<sc-if value="{{ temAberta }}" hint-placeholder-val="{{ false }}">
+<p style="margin: 4px 0 0; padding: 10px 12px; border-radius: 10px; background: #EFE2C2; font-size: 13px; line-height: 1.4;">{{ abertaInfo }}</p>
+</sc-if>
+</div>
+</sc-if>
+</main>
+
+<sc-if value="{{ temToast }}" hint-placeholder-val="{{ false }}">
+<div role="status" style="position: absolute; left: 16px; right: 16px; bottom: 88px; padding: 12px 14px; border-radius: 12px; background: #16130F; border: 1px solid #C49A3C; color: #F7F0E1; font-size: 14px; display: flex; align-items: center; gap: 10px;">
+<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="#D9B45A"></path></svg>
+<span style="flex: 1;">{{ toast }}</span>
+<button type="button" onClick="{{ fecharToast }}" aria-label="Fechar aviso" style="width: 32px; height: 32px; border: 0; background: transparent; color: #F7F0E1; font-size: 18px;">×</button>
+</div>
+</sc-if>
+
+<nav aria-label="Seções" style="position: absolute; left: 0; right: 0; bottom: 0; height: 76px; display: flex; background: #1A1611; border-top: 1px solid #C49A3C;">
+<sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+<button type="button" onClick="{{ t.pick }}" aria-current="{{ t.current }}" style="{{ t.style }}">
+<span style="{{ t.dot }}"></span>
+<span>{{ t.label }}</span>
+</button>
+</sc-for>
+</nav>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"cenario":{"editor":"enum","options":["primeira visita","na fila","minha vez"],"default":"na fila"},"$preview":{"width":390,"height":844}}'>
+const SONGS = [["4877","CHIQUITITA","Abba","Chiquitita tell me wha...","EUA"],["4574","DANCING QUEEN","Abba","Yeh! you can dance you...","EUA"],["19333","FERNANDO","Abba","Can you hear the drums...","EUA"],["1881","1965 (DUAS TRIBOS)","Legião Urbana","Vou passar quero ver...","BRA"],["9371","A CANÇÃO DO SENHOR DA GUERRA","Legião Urbana","Existe alguém esperando..","BRA"],["9380","ACENDA O FAROL","Tim Maia","Pneu furou acenda o fa...","BRA"],["15721","A FIM DE VOLTAR","Tim Maia","A fim de voltar mas eu...","BRA"],["16041","ALÔ PORTEIRO","Marília Mendonça","Pegue suas coisas que ...","BRA"],["16246","AMANTE NÃO TEM LAR","Marília Mendonça","Só vim me desculpar eu...","BRA"],["19561","A KIND OF MAGIC","Queen","It's a kind of magic","EUA"],["19370","BOHEMIAN RHAPSODY","Queen","Is this the real life ...","EUA"],["9017","CRAZY LITTLE THING CALLED LOVE","Queen","This thing called love...","EUA"],["15882","BANG","Anitta","Vem na maldade com von...","BRA"],["15883","DEIXA ELE SOFRER","Anitta","Deixa ele chorar deixa...","BRA"],["4390","BRASIL","Cazuza","Não me convidaram pra ...","BRA"],["3312","CODINOME BEIJA FLOR","Cazuza","Pra que mentir fingir ...","BRA"],["4343","AÇAÍ","Djavan","Solidão de manhã poeir...","BRA"],["9383","ÁLIBI","Djavan","Havia mais que um dese...","BRA"],["1648","BOA NOITE","Djavan","Meu ar de dominador","BRA"],["7046","ABALOU","Ivete Sangalo","Você comigo é par é mais","BRA"],["9373","A GALERA","Ivete Sangalo","Fevereiro alegria muita f","BRA"],["6842","À FLOR DA PELE","Roupa Nova","Ninguém merece solidão...","BRA"],["3502","A FORÇA DO AMOR","Roupa Nova","Abriu minha visão no j...","BRA"],["4858","ALWAYS","Bon Jovi","This Romeo is bleeding...","EUA"],["19424","BED OF ROSES","Bon Jovi","Sitting here wasted an...","EUA"],["3002","A FÓRMULA DO AMOR","Kid Abelha","Eu tenho gestos aptos sei","BRA"],["9598","ALICE","Kid Abelha","Tantos sonhos morrem em..","BRA"],["16310","A GENTE NEM FICOU","Jorge e Mateus","E a gente nem ficou","BRA"],["15162","A HORA É AGORA","Jorge e Mateus","Ôôô... Aumente o som pra","BRA"],["6523","AGORA SÓ FALTA VOCÊ","Rita Lee","Um belo dia resolvi mu...","BRA"],["1862","AMBIÇÃO","Rita Lee","Eu saí pra estrada e n...","BRA"],["9086","ALL AT ONCE","Whitney Houston","All at once I fin'lly ...","EUA"],["9100","DIDN'T WE ALMOST HAVE IT ALL","Whitney Houston","Remember when we held ...","EUA"]].map(function (a) { return { cod: a[0], titulo: a[1], artista: a[2], inicio: a[3], idioma: a[4] }; });
+const BYCOD = {};
+SONGS.forEach(function (s) { BYCOD[s.cod] = s; });
+const VIPS = ['Helena'];
+function norm(s) { return (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
+function ordenar(peds, sung, last) {
+  const pend = peds.filter(function (x) { return x.st === 'pendente'; }).sort(function (a, b) { return a.t - b.t; });
+  const idx = {};
+  const keyed = pend.map(function (x) {
+    const i = idx[x.p] || 0; idx[x.p] = i + 1;
+    const r = VIPS.indexOf(x.p) >= 0 ? i : (sung[x.p] || 0) + i;
+    return { x: x, r: r };
+  });
+  keyed.sort(function (a, b) { return a.r - b.r || a.x.t - b.x.t; });
+  const fixed = keyed.filter(function (k) { return k.x.fix != null; }).sort(function (a, b) { return a.x.fix - b.x.fix; }).map(function (k) { return k.x; });
+  const rest = keyed.filter(function (k) { return k.x.fix == null; }).map(function (k) { return k.x; });
+  const out = fixed.slice();
+  let prev = out.length ? out[out.length - 1].p : last;
+  while (rest.length) {
+    let i = rest.findIndex(function (x) { return x.p !== prev || x.bypass; });
+    if (i < 0) i = 0;
+    const x = rest.splice(i, 1)[0];
+    out.push(x); prev = x.p;
+  }
+  return out;
+}
+function seed(cenario) {
+  const peds = [
+    { id: 1, p: 'Bia', cod: '4574', t: 1 }, { id: 2, p: 'Léo', cod: '19370', t: 2 }, { id: 3, p: 'Carol', cod: '6842', t: 3 },
+    { id: 4, p: 'Marcos', cod: '9380', t: 4 }, { id: 5, p: 'Duda', cod: '15882', t: 5 }, { id: 6, p: 'Tiago', cod: '4858', t: 6 },
+    { id: 7, p: 'Bia', cod: '3312', t: 7 }, { id: 8, p: 'Nanda', cod: '16041', t: 8 }, { id: 9, p: 'Júlia', cod: '3002', t: 9 },
+    { id: 10, p: 'Gui', cod: '7046', t: 10 }, { id: 11, p: 'Helena', cod: '9086', t: 11 }, { id: 12, p: 'Rafa', cod: '4877', t: 12 },
+    { id: 13, p: 'Carol', cod: '1648', t: 13 },
+    { id: 51, p: 'Helena', cod: '6523', t: -4, st: 'cantou' }, { id: 52, p: 'Marcos', cod: '9017', t: -3, st: 'cantou' },
+    { id: 53, p: 'Júlia', cod: '9598', t: -2, st: 'cantou' }, { id: 54, p: 'Rafa', cod: '19424', t: -1, st: 'cantou' },
+    { id: 50, p: 'Helena', cod: '19333', t: -5, st: 'cantou' }, { id: 49, p: 'Marcos', cod: '9371', t: -6, st: 'cantou' }
+  ].map(function (x) { return Object.assign({ st: 'pendente', fix: null, bypass: false, pulos: 0 }, x); });
+  let me = null;
+  if (cenario === 'na fila') { me = 'Ana'; peds.push({ id: 20, p: 'Ana', cod: '9383', t: 4.5, st: 'pendente', fix: null, bypass: false, pulos: 0 }); }
+  if (cenario === 'minha vez') { me = 'Ana'; peds.push({ id: 20, p: 'Ana', cod: '9383', t: 0, st: 'pendente', fix: null, bypass: false, pulos: 0 }); }
+  return { me: me, nomeInput: '', erroNome: false, tab: 'fila', q: '', filtro: 'todas', toast: '', clock: 100, nextId: 100,
+    sung: { Helena: 2, Marcos: 2, 'Júlia': 1, Rafa: 1 }, last: 'Rafa', peds: peds,
+    ultima: 54, meuVoto: {}, rankModo: 'pessoas',
+    votos: { 49: [8, 9, 8, 7, 9, 8], 50: [9, 8, 9, 9, 10, 8, 9], 51: [10, 10, 9, 10, 8, 10, 9, 10, 10, 7, 10], 52: [7, 8, 6, 8, 9, 7, 5, 8], 53: [9, 8, 9, 10, 8, 9, 7, 9], 54: [6, 5, 7, 4, 6, 8], 1: [8, 9, 7, 9, 8], 20: [9, 7, 8] } };
+}
+function mediana(v) {
+  const a = v.slice().sort(function (x, y) { return x - y; }); const m = Math.floor(a.length / 2);
+  return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2;
+}
+function fmt(n) { return n % 1 ? n.toFixed(1).replace('.', ',') : String(n); }
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = seed(props.cenario || 'na fila'); }
+  componentDidUpdate(prev) { if (prev.cenario !== this.props.cenario) this.setState(seed(this.props.cenario || 'na fila')); }
+  renderVals() {
+    const s = this.state;
+    const self = this;
+    const ordem = ordenar(s.peds, s.sung, s.last);
+    const atualPed = ordem[0];
+    const atual = atualPed ? Object.assign({ p: atualPed.p }, BYCOD[atualPed.cod]) : { p: '', titulo: '', artista: '', cod: '' };
+    const proximos = ordem.slice(1, 11).map(function (x, i) {
+      const so = BYCOD[x.cod]; const meu = x.p === s.me;
+      return { pos: i + 1, nome: x.p, musica: so.titulo + ' · ' + so.artista, meu: meu,
+        rowStyle: 'display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; ' + (meu ? 'background: #EFE2C2; border: 1px solid #C49A3C;' : 'background: #FFFBF2; border: 1px solid #E3D5B5;') };
+    });
+    const meusPend = s.peds.filter(function (x) { return x.p === s.me && x.st === 'pendente'; });
+    const limite = meusPend.length >= 3;
+    const meusCods = meusPend.map(function (x) { return x.cod; });
+    const qn = norm(s.q.trim());
+    let res = SONGS.filter(function (so) {
+      if (s.filtro === 'nac' && so.idioma !== 'BRA') return false;
+      if (s.filtro === 'int' && so.idioma === 'BRA') return false;
+      if (!qn) return true;
+      return norm(so.titulo + ' ' + so.artista + ' ' + so.inicio).indexOf(qn) >= 0;
+    });
+    const total = res.length;
+    res = res.slice(0, 20).map(function (so) {
+      const ja = meusCods.indexOf(so.cod) >= 0; const bloq = ja || limite;
+      return Object.assign({}, so, { bloq: bloq, btn: ja ? 'Na fila' : 'Pedir', aria: (ja ? 'Já pedida: ' : 'Pedir ') + so.titulo,
+        btnStyle: 'height: 44px; min-width: 72px; padding: 0 14px; border-radius: 10px; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; ' + (bloq ? 'border: 1px solid #E3D5B5; background: #EFE7D3; color: #6B5D45;' : 'border: 1px solid #C49A3C; background: #1A1611; color: #F7F0E1;'),
+        pedir: function () { self.pedir(so.cod); } });
+    });
+    const filtros = [['todas', 'Todas'], ['nac', 'Nacionais'], ['int', 'Internacionais']].map(function (f) {
+      const on = s.filtro === f[0];
+      return { label: f[1], pressed: on ? 'true' : 'false', pick: function () { self.setState({ filtro: f[0] }); },
+        style: 'height: 36px; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 500; ' + (on ? 'background: #1A1611; color: #F7F0E1; border: 1px solid #1A1611;' : 'background: transparent; color: #1A1611; border: 1px solid #C49A3C;') };
+    });
+    const meus = meusPend.map(function (x) {
+      const pos = ordem.indexOf(x); const so = BYCOD[x.cod];
+      return { pos: pos, espera: pos === 0 ? 'agora' : '~' + (pos * 4) + ' min', titulo: so.titulo, artista: so.artista, cod: so.cod,
+        aria: 'Cancelar ' + so.titulo, cancelar: function () { self.cancelar(x.id); } };
+    }).sort(function (a, b) { return a.pos - b.pos; });
+    meus.forEach(function (m) { m.posLabel = m.pos === 0 ? 'Agora' : m.pos + 'º'; });
+    const cantadas = s.peds.filter(function (x) { return x.p === s.me && x.st === 'cantou'; }).map(function (x) { return BYCOD[x.cod]; });
+    const votosDe = function (id) { const o = (s.votos[id] || []).slice(); if (s.meuVoto[id] != null) o.push(s.meuVoto[id]); return o; };
+    const bloco = function (ped) {
+      if (!ped || !s.me || ped.p === s.me) return { mostrar: false, notas: [] };
+      const meu = s.meuVoto[ped.id]; const c = votosDe(ped.id).length;
+      const notas = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(function (n) {
+        const on = meu === n;
+        return { n: n, pressed: on ? 'true' : 'false', aria: 'Nota ' + n + ' para ' + ped.p, pick: function () { self.votar(ped.id, n); },
+          style: 'height: 44px; border-radius: 10px; font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; ' + (on ? 'background: #1A1611; color: #D9B45A; border: 1px solid #1A1611;' : 'background: #F7F0E1; color: #1A1611; border: 1px solid #D9C28A;') };
+      });
+      return { mostrar: true, nome: ped.p, titulo: BYCOD[ped.cod].titulo, notas: notas,
+        rodape: (meu != null ? 'Seu voto: ' + meu + ' (dá para mudar) · ' : '') + c + (c === 1 ? ' voto' : ' votos') + ' até agora. A nota aparece quando a votação fechar.' };
+    };
+    const ultimaPed = s.peds.find(function (x) { return x.id === s.ultima; });
+    const fechadas = s.peds.filter(function (x) { return x.st === 'cantou' && x.id !== s.ultima && votosDe(x.id).length >= 3; })
+      .map(function (x) { const v = votosDe(x.id); return { x: x, med: mediana(v), n: v.length }; })
+      .sort(function (a, b) { return b.med - a.med || b.n - a.n; });
+    const ranking = fechadas.map(function (f, i) {
+      const top = i === 0; const so = BYCOD[f.x.cod];
+      return { pos: i + 1, nome: f.x.p + (f.x.p === s.me ? ' (você)' : ''), musica: so.titulo + ' · ' + so.artista, nota: fmt(f.med), votos: f.n + ' votos',
+        cardStyle: 'display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 16px; ' + (top ? 'background: #16130F; color: #F7F0E1; border: 1px solid #C49A3C;' : 'background: #FFFBF2; color: #1A1611; border: 1px solid #E3D5B5;'),
+        posStyle: 'width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; ' + (top ? 'background: #D9B45A; color: #1A1611;' : 'border: 1px solid #C49A3C;'),
+        subStyle: 'font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; ' + (top ? 'color: #CFC4AE;' : 'color: #6B5D45;'),
+        notaStyle: 'font-size: 30px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; ' + (top ? 'color: #D9B45A;' : 'color: #1A1611;') };
+    });
+    const est = function (top) {
+      return { cardStyle: 'display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 16px; ' + (top ? 'background: #16130F; color: #F7F0E1; border: 1px solid #C49A3C;' : 'background: #FFFBF2; color: #1A1611; border: 1px solid #E3D5B5;'),
+        posStyle: 'width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; ' + (top ? 'background: #D9B45A; color: #1A1611;' : 'border: 1px solid #C49A3C;'),
+        subStyle: 'font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; ' + (top ? 'color: #CFC4AE;' : 'color: #6B5D45;'),
+        notaStyle: 'font-size: 30px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; ' + (top ? 'color: #D9B45A;' : 'color: #1A1611;') };
+    };
+    const porPessoa = {};
+    fechadas.forEach(function (f) { (porPessoa[f.x.p] = porPessoa[f.x.p] || []).push(f); });
+    const pessoas = Object.keys(porPessoa).filter(function (p) { return porPessoa[p].length >= 2; }).map(function (p) {
+      const l = porPessoa[p];
+      const media = Math.round(l.reduce(function (a, f) { return a + f.med; }, 0) / l.length * 10) / 10;
+      const best = l.reduce(function (a, f) { return f.med > a.med ? f : a; });
+      return { p: p, media: media, n: l.length, best: best };
+    }).sort(function (a, b) { return b.media - a.media || b.best.med - a.best.med || b.n - a.n; });
+    const rankingPessoas = pessoas.map(function (x, i) {
+      return Object.assign(est(i === 0), { pos: i + 1, nome: x.p + (x.p === s.me ? ' (você)' : ''),
+        musica: x.n + (x.n === 1 ? ' performance' : ' performances') + ' · melhor: ' + fmt(x.best.med) + ' em ' + BYCOD[x.best.x.cod].titulo,
+        nota: fmt(x.media), votos: 'média' });
+    });
+    const rankingVis = s.rankModo === 'pessoas' ? rankingPessoas : ranking;
+    const modos = [['pessoas', 'Pessoas'], ['perf', 'Performances']].map(function (m) {
+      const on = s.rankModo === m[0];
+      return { label: m[1], pressed: on ? 'true' : 'false', pick: function () { self.setState({ rankModo: m[0] }); },
+        style: 'height: 40px; border-radius: 9px; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; ' + (on ? 'background: #1A1611; color: #F7F0E1; border: 1px solid #1A1611;' : 'background: transparent; color: #1A1611; border: 1px solid transparent;') };
+    });
+    const tabs = [['fila', 'Fila'], ['busca', 'Catálogo'], ['meus', 'Pedidos' + (meusPend.length ? ' (' + meusPend.length + ')' : '')], ['nota', 'Ranking']].map(function (t) {
+      const on = s.tab === t[0];
+      return { label: t[1], current: on ? 'page' : 'false', pick: function () { self.setState({ tab: t[0], toast: '' }); },
+        style: 'flex: 1; border: 0; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; ' + (on ? 'color: #D9B45A;' : 'color: #CFC4AE;'),
+        dot: 'width: 6px; height: 6px; border-radius: 50%; ' + (on ? 'background: #D9B45A;' : 'background: transparent;') };
+    });
+    return {
+      semNome: !s.me, comNome: !!s.me, me: s.me, nomeInput: s.nomeInput, erroNome: s.erroNome,
+      onNome: function (e) { self.setState({ nomeInput: e.target.value, erroNome: false }); },
+      entrar: function () { const n = s.nomeInput.trim(); if (!n) { self.setState({ erroNome: true }); return; } self.setState({ me: n, tab: 'busca' }); },
+      tabFila: s.tab === 'fila', tabBusca: s.tab === 'busca', tabMeus: s.tab === 'meus', tabNota: s.tab === 'nota', tabs: tabs,
+      va: bloco(atualPed), vu: bloco(ultimaPed),
+      rankingVis: rankingVis, semRanking: rankingVis.length === 0, temAberta: !!ultimaPed, modos: modos,
+      legenda: s.rankModo === 'pessoas' ? 'Média das notas de cada pessoa · mínimo de 2 performances' : 'Mediana dos votos de 0 a 10 · mínimo de 3 votos',
+      abertaInfo: ultimaPed ? 'Votação aberta para ' + ultimaPed.p + ' (' + BYCOD[ultimaPed.cod].titulo + '). Entra no ranking quando a próxima performance terminar.' : '',
+      temAtual: !!atualPed, semAtual: !atualPed, atual: atual, minhaVez: !!atualPed && atualPed.p === s.me,
+      cantou: function () { self.cantou(atualPed); },
+      proximos: proximos, totalFila: ordem.length,
+      q: s.q, onQ: function (e) { self.setState({ q: e.target.value }); }, filtros: filtros,
+      resultados: res, resumoBusca: total === 0 ? 'Nenhuma música encontrada' : (total > 20 ? 'Mostrando 20 de ' + total : total + (total === 1 ? ' música' : ' músicas')),
+      limiteAtingido: limite, meus: meus, meusCount: meusPend.length, semMeus: meusPend.length === 0,
+      irBusca: function () { self.setState({ tab: 'busca' }); },
+      cantadas: cantadas, temCantadas: cantadas.length > 0,
+      temToast: !!s.toast, toast: s.toast, fecharToast: function () { self.setState({ toast: '' }); }
+    };
+  }
+  pedir(cod) {
+    const s = this.state;
+    const n = s.peds.filter(function (x) { return x.p === s.me && x.st === 'pendente'; }).length;
+    if (n >= 3) return;
+    const novo = { id: s.nextId, p: s.me, cod: cod, t: s.clock, st: 'pendente', fix: null, bypass: false, pulos: 0 };
+    const peds = s.peds.concat([novo]);
+    const pos = ordenar(peds, s.sung, s.last).indexOf(novo);
+    this.setState({ peds: peds, nextId: s.nextId + 1, clock: s.clock + 1,
+      toast: BYCOD[cod].titulo + ' entrou na fila. ' + (pos === 0 ? 'Você é o próximo!' : 'Posição estimada: ' + pos + 'º (~' + pos * 4 + ' min).') });
+  }
+  cancelar(id) {
+    this.setState({ peds: this.state.peds.map(function (x) { return x.id === id ? Object.assign({}, x, { st: 'cancelado' }) : x; }), toast: 'Pedido cancelado.' });
+  }
+  cantou(ped) {
+    if (!ped) return;
+    const s = this.state; const sung = Object.assign({}, s.sung); sung[ped.p] = (sung[ped.p] || 0) + 1;
+    const votos = Object.assign({}, s.votos); if (!votos[ped.id]) votos[ped.id] = [9, 8, 10, 9, 7, 9, 8];
+    this.setState({ peds: s.peds.map(function (x) { return x.id === ped.id ? Object.assign({}, x, { st: 'cantou' }) : x; }), sung: sung, last: ped.p,
+      ultima: ped.id, votos: votos, toast: ped.p === s.me ? 'Arrasou! A galera está votando na sua nota.' : 'A fila andou.' });
+  }
+  votar(id, n) {
+    const mv = Object.assign({}, this.state.meuVoto); mv[id] = n;
+    this.setState({ meuVoto: mv, toast: 'Voto registrado: ' + n + '.' });
+  }
+}
+</script>
+</body>
+</html>

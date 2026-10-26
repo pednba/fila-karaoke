@@ -1,0 +1,392 @@
+# Fila Karaokê: especificação v1
+
+App web para organizar a fila de um karaokê em festas: convidados entram pelo celular via QR code, buscam no catálogo do aparelho, pedem músicas e votam nas performances. Quem organiza controla tudo por um painel de admin, que começa com um setup da festa.
+
+Uma instalação atende **uma festa por vez**. Ao terminar, o admin arquiva a festa e começa outra. Multi-tenant (várias festas simultâneas no mesmo servidor) está fora do escopo.
+
+## 1. Conceitos
+
+- **Festa:** o evento configurado no setup (nome em destaque, data, convidados, arte, regras).
+- **Catálogo:** a lista de músicas do aparelho de karaokê usado na festa, importada no setup. Cada música tem o código numérico que se digita no aparelho.
+- **Pessoa:** um aparelho que entrou na festa com um nome (identidade por cookie).
+- **Pedido:** uma música pedida por uma pessoa.
+- **Performance:** um pedido que foi cantado; recebe a Nota da festa.
+
+### Dimensionamento
+O setup mostra a capacidade estimada da festa: `músicas = duração_em_min / minutos_por_música`. Com 4 h e 5 min por música dá ~48 músicas. Se `músicas < convidados`, o setup avisa que nem todos devem conseguir cantar duas vezes. A fila por rodadas existe para esse cenário.
+
+## 2. Escopo
+
+### Entra na v1
+- **Setup da festa** no admin (seção 4).
+- Busca no catálogo (título, artista, início da letra, código), filtro Nacionais/Internacionais.
+- Cadastro só com nome, identidade por cookie no aparelho.
+- Pedido de música com limite de pendentes por pessoa, cancelar o próprio pedido.
+- Fila por rodadas com regra de "ninguém canta 2 seguidas".
+- Destaque da música da vez + próximos 10.
+- "Cantou?" para o cantor da vez.
+- Admin: Cantou, Pular ausente, mudar ordem, bypass da regra, VIP (várias pessoas), adicionar pedido para quem não tem celular.
+- Nota da festa: voto 0 a 10 por performance, mediana, ranking de performances e ranking de pessoas (cada um pode ser desligado no setup).
+- Encerrar festa (ranking final em modo leitura) e arquivar para começar outra.
+
+### Fora da v1
+- Várias festas simultâneas, contas de usuário, duetos, modo telão, renomear/mesclar pessoas, pedido fora do catálogo, WebSocket/SSE, extração automática de cores da arte.
+
+## 3. Stack
+
+| Camada | Escolha | Motivo |
+|---|---|---|
+| Servidor | Node 20 + Express | Front e back em JS |
+| Banco | SQLite via `better-sqlite3` | Uma festa, um processo, backup é copiar um arquivo |
+| Front | HTML + CSS + JS puro, sem build | Poucas telas |
+| Tempo real | Polling a cada 4 s com versão (9.1) | ~50 clientes = ~12 req/s |
+| Uploads | `multer` em disco (`data/uploads/`) | Arte da festa e arquivo do catálogo |
+| QR code | `qrcode` (gera PNG/SVG no servidor) | Para imprimir |
+| PDF do catálogo | `pdftotext` (pacote `poppler-utils`) chamado via `child_process` | Extrai o texto preservando colunas |
+| Proxy/TLS | Caddy | HTTPS automático |
+| Processo | pm2 ou systemd | Reinício automático |
+
+Estrutura:
+
+```
+fila-karaoke/
+  server.js
+  db.js                 schema e migrações
+  fila.js               algoritmo da fila (puro, testado)
+  votos.js              mediana e rankings (puro, testado)
+  importadores/
+    index.js            escolhe o importador pelo tipo de arquivo
+    csv.js
+    pdf-lista-aparelho.js   porte em JS de pdf_lista_aparelho.py
+    pdf_lista_aparelho.py   implementação de referência (Python)
+  scripts/reset_festa.js, arquivar_festa.js
+  public/               index.html, admin.html, setup.html, app.css, *.js
+  data/                 banco, uploads e catálogos (fora do git)
+  test/
+  docs/design/          referência visual
+```
+
+## 4. Setup da festa
+
+### 4.1 Primeiro acesso
+- Sem festa configurada, `/` mostra "Festa em preparação" e `/admin` abre o setup.
+- **Proteção do primeiro acesso:** o setup exige o `SETUP_TOKEN` definido no `.env` (o servidor recusa subir sem ele). Sem isso, qualquer pessoa que abrisse a URL antes do dono viraria admin. Depois do setup, o acesso ao admin passa a ser pelo PIN criado no passo 1.
+
+### 4.2 Passos do assistente (salvar a cada passo, pode voltar)
+
+1. **Acesso:** PIN do admin (4 a 8 dígitos, confirmado duas vezes).
+2. **Festa**
+   - Nome em destaque (ex.: "Helena"): aparece na fonte de destaque.
+   - Título (padrão: "Karaokê da {nome}"; editável, ex.: "Karaokê do Escritório").
+   - Subtítulo opcional (ex.: "45 anos", "Formatura 2026").
+   - Data e hora de início, duração em horas.
+   - Local (opcional, texto livre).
+   - Número estimado de convidados.
+3. **Visual**
+   - Arte da festa: upload JPG/PNG/WebP até 5 MB (o convite, por exemplo). Aparece na tela de entrada dos convidados e no topo do ranking final. Redimensionar no servidor para no máximo 1200 px de largura.
+   - Tema: escolher um preset (seção 11) e opcionalmente ajustar a cor de destaque. O app recusa combinações que não passam contraste 4.5:1 para texto.
+   - Fonte de destaque: uma de uma lista curta (Great Vibes, Playfair Display, Pacifico, Bebas Neue).
+   - Prévia ao vivo da tela de entrada do convidado e do cartão "Agora no palco".
+4. **Catálogo**
+   - Upload do arquivo do aparelho: PDF no formato "lista de músicas do aparelho" (seção 5.2) ou CSV (seção 5.3).
+   - O servidor importa e mostra o resultado antes de confirmar: total de músicas, quantas por idioma, linhas ignoradas (com amostra), códigos duplicados. Se o PDF tiver um total no rodapé, comparar e avisar se não bater.
+   - Pode reimportar a qualquer momento antes de abrir a festa. Depois de aberta, reimportar exige confirmação (pedidos de músicas que sumirem são cancelados).
+5. **Regras** (todas com padrão)
+
+   | Regra | Padrão |
+   |---|---|
+   | Pedidos pendentes por pessoa | 3 |
+   | Minutos por música (para estimativas) | 5 |
+   | Pulos até sair da fila | 2 |
+   | Votação ligada | sim |
+   | Mínimo de votos para ter nota | 3 |
+   | Ranking de pessoas ligado | sim |
+   | Mínimo de performances no ranking de pessoas | 2 |
+   | VIP disponível | sim |
+
+   O passo mostra o dimensionamento (seção 1) com os números da festa.
+6. **Publicar**
+   - Resumo de tudo, link público e QR code (baixar PNG e SVG; versão para imprimir em A4 com a arte, o título e o QR).
+   - Botão "Abrir festa": muda o status para `aberta` e libera a entrada dos convidados.
+
+### 4.3 Ciclo de vida
+`rascunho` → `aberta` → `encerrada` → (arquivar) → novo `rascunho`.
+- `aberta`: tudo funcionando.
+- `encerrada`: convidados veem só o ranking final e "Obrigado!"; pedidos e votos bloqueados.
+- **Arquivar:** copia o banco para `data/arquivo/<data>-<slug>.db` e zera pessoas, pedidos, votos e a festa. O catálogo pode ser mantido para a próxima festa.
+- Os dados da festa podem ser editados no admin a qualquer momento (menu "Festa"), exceto o PIN, que tem tela própria.
+
+## 5. Catálogo
+
+### 5.1 Tabela
+Ver `musicas` na seção 6. A coluna `busca` guarda título + artista + início da letra + código, em minúsculas e sem acento.
+
+### 5.2 Importador PDF "lista de aparelho"
+Formato comum em listas de aparelhos de karaokê alugados: PDF com camada de texto (não escaneado), colunas `Intérprete · Cod · Título · Início da letra · Idioma`, cabeçalho repetido em cada página e linha final "Total de musicas listadas N".
+
+Algoritmo (referência: `importadores/pdf_lista_aparelho.py`, validado num catálogo real de 10.927 músicas, com 100% das linhas reconhecidas):
+1. `pdftotext -layout arquivo.pdf -`.
+2. Ignorar linhas de cabeçalho (contêm `APARELHO`, `AUDIOVISUAL`, `DE KARAOKE`, `LISTA DE MUSICAS`, `Ordem alfabetica`, `por interprete`, `codigo`, `Interprete`) e a primeira linha do arquivo (costuma ter o contato da locadora, que **não** deve ser importado).
+3. Linha de música: `^(artista)\s+(cod 3-6 dígitos)\s+(título)\s{2,}(início)\s+(idioma 3 letras maiúsculas)$`. Alternativa sem início da letra.
+4. Quando título e início vêm colados com um espaço só: o título está em maiúsculas; separar na primeira palavra com letra minúscula (puxando junto uma letra isolada anterior, como "E").
+5. Títulos quebrados em várias linhas: linhas só com texto em maiúsculas, recuadas, adjacentes a uma linha de música sem título; juntar ao título.
+6. Ler o total do rodapé e comparar.
+
+A posição das colunas muda de página para página; por isso o parser usa regex por linha, e não posições fixas.
+Limitação conhecida: o PDF trunca artistas longos ("...") e títulos em ~30 caracteres. Não há como recuperar.
+
+### 5.3 Importador CSV
+UTF-8, cabeçalho obrigatório, separador `,` ou `;` (detectar):
+`cod,titulo,artista,idioma,inicio` (`inicio` opcional; `idioma` aceita `BRA`, `EUA`, etc. ou vazio, tratado como `BRA`). Exemplo em `data/catalogos/exemplo.csv`.
+
+### 5.4 Busca
+`WHERE busca LIKE '%' || ? || '%'` com o termo normalizado (até 20 mil linhas, sem necessidade de FTS). Ordenação: casamento no título, depois artista, depois letra; idioma `JAP` por último. Filtro "Nacionais" = `BRA`; "Internacionais" = o resto. Limite de 20 resultados + total.
+
+## 6. Modelo de dados
+
+```sql
+CREATE TABLE festa (
+  id           INTEGER PRIMARY KEY CHECK (id = 1),
+  status       TEXT NOT NULL DEFAULT 'rascunho',  -- rascunho | aberta | encerrada
+  nome_destaque TEXT NOT NULL DEFAULT '',
+  titulo       TEXT NOT NULL DEFAULT '',
+  subtitulo    TEXT NOT NULL DEFAULT '',
+  inicio_em    TEXT,                -- ISO 8601 com fuso
+  duracao_min  INTEGER NOT NULL DEFAULT 240,
+  local        TEXT NOT NULL DEFAULT '',
+  convidados   INTEGER NOT NULL DEFAULT 30,
+  arte_arquivo TEXT,                -- caminho em data/uploads
+  tema         TEXT NOT NULL,       -- JSON: preset + tokens finais (seção 11)
+  regras       TEXT NOT NULL,       -- JSON com as regras do passo 5
+  admin_pin_hash TEXT,              -- scrypt
+  catalogo_origem TEXT,             -- nome do arquivo importado + data
+  atualizado_em TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE musicas (
+  cod      TEXT PRIMARY KEY,
+  titulo   TEXT NOT NULL,
+  artista  TEXT NOT NULL,
+  inicio   TEXT NOT NULL DEFAULT '',
+  idioma   TEXT NOT NULL DEFAULT 'BRA',
+  busca    TEXT NOT NULL
+);
+
+CREATE TABLE pessoas (
+  id         TEXT PRIMARY KEY,           -- UUID do cookie; criadas pelo admin: 'adm-<uuid>'
+  nome       TEXT NOT NULL,
+  nome_norm  TEXT NOT NULL UNIQUE,
+  vip        INTEGER NOT NULL DEFAULT 0,
+  criado_em  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE pedidos (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  pessoa_id      TEXT NOT NULL REFERENCES pessoas(id),
+  musica_cod     TEXT NOT NULL REFERENCES musicas(cod),
+  status         TEXT NOT NULL DEFAULT 'pendente',
+                 -- pendente | na_vez | cantou | cancelado | removido
+  t_fila         REAL NOT NULL,
+  pulos          INTEGER NOT NULL DEFAULT 0,
+  ordem_manual   INTEGER,
+  bypass         INTEGER NOT NULL DEFAULT 0,
+  votacao_aberta INTEGER NOT NULL DEFAULT 0,
+  criado_em      TEXT NOT NULL DEFAULT (datetime('now')),
+  na_vez_em      TEXT,
+  finalizado_em  TEXT
+);
+
+CREATE TABLE votos (
+  pedido_id  INTEGER NOT NULL REFERENCES pedidos(id),
+  pessoa_id  TEXT NOT NULL REFERENCES pessoas(id),
+  nota       INTEGER NOT NULL CHECK (nota BETWEEN 0 AND 10),
+  atualizado_em TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (pedido_id, pessoa_id)
+);
+
+CREATE TABLE meta (chave TEXT PRIMARY KEY, valor TEXT);  -- versao, ultimo_cantor_id
+```
+
+`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;`
+
+## 7. Identidade e acesso
+
+- **Convidado:** `POST /api/pessoas {nome}` cria a pessoa e grava o cookie `kid` (UUID, `HttpOnly`, `SameSite=Lax`, `Secure`, validade até 24 h depois do fim da festa).
+- **Nome único** na festa (sem acento e sem caixa). Se já existe: `409`, e a tela sugere acrescentar uma inicial.
+- **Admin:** `POST /api/admin/login {pin}` compara com o hash e grava cookie `adm` assinado com `COOKIE_SECRET`. Máximo de 5 tentativas por minuto por IP.
+- **Setup inicial:** rotas `/api/setup/*` aceitam o cabeçalho `X-Setup-Token` enquanto não existe PIN; depois disso, só cookie de admin.
+- Risco aceito: limpar cookie ou usar aba anônima cria outra pessoa (outro voto, outra cota de pedidos).
+
+## 8. Regras da fila
+
+Os números citados abaixo vêm de `festa.regras`.
+
+### 8.1 Estados
+- `pendente`: na fila.
+- `na_vez`: música atual. No máximo um pedido com esse status, e ele fica **travado**: nenhum recálculo tira alguém do palco no meio da música.
+- `cantou`, `cancelado`, `removido`: finais.
+
+### 8.2 Ordenação dos pendentes (`ordenar`, função pura)
+Entrada: pendentes, cantadas por pessoa, cantor da vez, último cantor, VIPs.
+1. Para cada pessoa, ordenar os pendentes dela por `t_fila`; índice `i` = 0, 1, 2...
+2. Rodada: pessoa comum `cantadas + i`; VIP `i` (conta sempre como quem ainda não cantou).
+3. Ordenar por `(rodada, t_fila)`.
+4. Pedidos com `ordem_manual` vêm primeiro, nessa ordem, sem passar pela regra do passo 5.
+5. Nos demais, passe anti-repetição: o "anterior" inicial é o último manual, senão o cantor da vez, senão o último cantor. Escolher o primeiro restante de pessoa diferente do anterior ou com `bypass = 1`. Se só sobrou a mesma pessoa, aceitar.
+
+### 8.3 Avanço
+Quando o `na_vez` sai (cantou, pulado ou removido), na mesma transação, promover o primeiro de `ordenar` a `na_vez` e zerar o `ordem_manual` dele. Fila vazia: o próximo pedido criado vira `na_vez` direto.
+
+### 8.4 Ações
+| Ação | Quem | Efeito |
+|---|---|---|
+| Pedir | convidado | Valida música, limite de pendentes (`pendente` + `na_vez`) e pedido repetido. `t_fila = agora`. |
+| Cancelar | dono | Só `pendente`. |
+| Cantou | dono do `na_vez` ou admin | Vira `cantou`, atualiza último cantor, votações (seção 9), avança. |
+| Pular ausente | admin | Antes do limite de pulos: volta a `pendente`, `pulos + 1`, `t_fila = agora`, `ordem_manual = NULL`, apaga votos do pedido, avança. No limite: `removido`, avança. |
+| Mover ↑/↓ | admin | Materializa a ordem atual em `ordem_manual = 0..n` e troca o par. |
+| Bypass | admin | Liga/desliga no pedido. |
+| VIP | admin | Liga/desliga na pessoa (várias permitidas). O admin mostra quantos VIPs há. |
+| Adicionar pedido | admin | Para convidado sem celular; cria ou reaproveita a pessoa pelo nome. |
+
+Toda escrita incrementa `meta.versao`.
+
+## 9. Nota da festa
+
+- Pode ser desligada no setup; desligada, somem os cartões de voto e a aba Ranking.
+- Vota qualquer pessoa cadastrada, menos o próprio cantor; um voto por performance, alterável enquanto aberta.
+- Abre quando o pedido vira `na_vez`; fecha quando a **próxima** performance vira `cantou`. No máximo duas abertas.
+- Parcial escondida enquanto aberta: a API devolve só contagem e o voto do próprio usuário.
+- Nota = mediana (par: média dos dois do meio), exibida com 1 casa e vírgula.
+- Mínimo de votos configurável (padrão 3). Pedido pulado perde os votos.
+
+### Rankings
+- **Performances:** `cantou`, votação fechada, votos ≥ mínimo; mediana desc, empate por número de votos.
+- **Pessoas:** pessoas com performances com nota ≥ mínimo configurado (padrão 2); média das medianas (1 casa); empate pela melhor performance, depois número de performances. Se vazio, a aba abre em Performances com aviso.
+
+## 10. API
+
+JSON. Erros: `{ "erro": "codigo", "mensagem": "texto para a tela" }`.
+
+### 10.1 Polling
+`GET /api/estado` com `ETag: "<versao>-<pessoa>"` e `If-None-Match` → `304`. A cada 4 s; pausar com `document.hidden`.
+
+### 10.2 Público
+| Rota | Corpo | Resposta |
+|---|---|---|
+| `GET /api/festa` | | dados públicos: status, título, nome em destaque, subtítulo, data, local, url da arte, tema, regras visíveis |
+| `GET /api/festa/arte` | | a imagem |
+| `POST /api/pessoas` | `{nome}` | `201` + cookie; `409 nome_em_uso`; `403 festa_fechada` |
+| `GET /api/estado` | | `{versao, me, atual, proximos[10], total_fila, meus_pedidos[], votacoes[], limite}` |
+| `GET /api/musicas?q=&filtro=` | | até 20 + `total` |
+| `POST /api/pedidos` | `{musica_cod}` | `201 {pedido, posicao_estimada}`; `limite_atingido`, `ja_pedida`, `musica_inexistente` |
+| `DELETE /api/pedidos/:id` | | `204` |
+| `POST /api/pedidos/:id/cantou` | | `200` |
+| `PUT /api/votos` | `{pedido_id, nota}` | `200 {n_votos}`; `votacao_fechada`, `voto_proprio` |
+| `GET /api/ranking?tipo=pessoas\|performances` | | lista |
+
+### 10.3 Setup e festa (admin, ou `X-Setup-Token` antes do PIN)
+| Rota | Corpo |
+|---|---|
+| `GET /api/setup` | estado do assistente e o que falta |
+| `PUT /api/setup/pin` | `{pin}` |
+| `PUT /api/setup/festa` | campos do passo 2 |
+| `PUT /api/setup/visual` | `{preset, destaque, fonte}` |
+| `POST /api/setup/arte` | multipart `arte` |
+| `POST /api/setup/catalogo` | multipart `arquivo` → `{previa: {total, por_idioma, ignoradas[], duplicados, total_rodape}, token}` |
+| `POST /api/setup/catalogo/confirmar` | `{token}` |
+| `PUT /api/setup/regras` | JSON de regras |
+| `GET /api/setup/qr.png`, `/qr.svg`, `/cartaz.pdf` ou `/cartaz.html` | material para imprimir |
+| `POST /api/festa/abrir`, `/encerrar`, `/arquivar` | |
+
+### 10.4 Operação (admin)
+`POST /api/admin/login`, `GET /api/admin/estado`, `POST /api/admin/cantou`, `POST /api/admin/pular`, `POST /api/admin/pedidos/:id/mover {direcao}`, `PATCH /api/admin/pedidos/:id {bypass}`, `GET /api/admin/pessoas`, `PATCH /api/admin/pessoas/:id {vip}`, `POST /api/admin/pedidos {nome, musica_cod}`.
+
+## 11. Visual e temas
+
+O tema é um conjunto de tokens CSS aplicado como variáveis em `:root` a partir de `festa.tema`.
+
+| Token | Uso |
+|---|---|
+| `--fundo` | fundo da página |
+| `--superficie` | cartões |
+| `--borda` | bordas suaves |
+| `--decor` | filetes, círculos, ícones decorativos (nunca texto pequeno) |
+| `--palco` | fundo do cartão "Agora no palco" e do 1º do ranking |
+| `--destaque-palco` | código da música e destaques sobre `--palco` |
+| `--texto`, `--texto-2` | texto principal e secundário sobre `--fundo` |
+| `--texto-palco`, `--texto-palco-2` | sobre `--palco` |
+| `--alerta`, `--alerta-fundo` | "2 seguidas", cancelar |
+| `--fonte-destaque` | nomes de pessoas e frases de efeito |
+| `--fonte-base` | todo o resto |
+
+Presets:
+
+| Preset | fundo | superficie | decor | palco | destaque-palco | texto | texto-2 | fonte destaque |
+|---|---|---|---|---|---|---|---|---|
+| Dourado clássico | `#F7F0E1` | `#FFFBF2` | `#C49A3C` | `#16130F` | `#D9B45A` | `#1A1611` | `#6B5D45` | Great Vibes |
+| Noite neon | `#121018` | `#1D1A26` | `#7C5CFF` | `#000000` | `#3EE6C1` | `#F2F0F7` | `#A9A3B5` | Bebas Neue |
+| Tropical | `#FFF6EC` | `#FFFFFF` | `#FF7A59` | `#0F3D3E` | `#FFD166` | `#1C2B2B` | `#4F6162` | Pacifico |
+| Minimalista | `#FFFFFF` | `#F6F6F6` | `#111111` | `#111111` | `#FFFFFF` | `#111111` | `#5C5C5C` | Playfair Display |
+
+- **Dourado clássico** é o tema do protótipo em `docs/design/`.
+- A cor de destaque escolhida pelo admin substitui `--decor` e `--destaque-palco`. Validar contraste: `--texto-2` sobre `--fundo` ≥ 4.5:1; `--destaque-palco` sobre `--palco` ≥ 4.5:1.
+- Motivo decorativo: linha fina em `--decor` com um ícone pequeno no meio (coração no Dourado clássico; o preset define o ícone).
+- Fonte base: Montserrat em todos os presets. Rótulos em caixa alta com `letter-spacing: 0.2em`.
+- Alvos de toque ≥ 44 px; inputs com `font-size: 16px`.
+
+## 12. Telas
+
+Referência visual: `docs/design/` (formato do protótipo; ver o LEIA-ME de lá).
+
+### Convidado (`/`)
+- **Entrada:** arte da festa (se houver), nome em destaque e subtítulo dentro do círculo decorativo, campo de nome, "Entrar na festa".
+- **Cabeçalho:** título curto + nome do convidado.
+- **Menu inferior:** Fila · Catálogo · Pedidos (n) · Ranking.
+- **Fila:** "Agora no palco" (título, artista, código grande, cantor); "Cantou?" quando é a vez do usuário; cartões de voto (atual e anterior); "Próximos 10" com o usuário destacado.
+- **Catálogo:** busca, filtros, "Pedir"/"Na fila", aviso de limite.
+- **Pedidos:** posição, espera estimada, cancelar, "Já cantei".
+- **Ranking:** Pessoas / Performances.
+- **Festa em preparação** (rascunho) e **Festa encerrada** (ranking final + agradecimento).
+
+### Admin (`/admin`)
+- Sem PIN configurado: assistente de setup (seção 4).
+- Com festa: Operação (contadores, palco com Cantou/Pular, fila com ↑ ↓, Bypass, VIP, selos, convidados, adicionar pedido) e um menu Festa (editar dados, visual, catálogo, regras, QR, encerrar, arquivar).
+
+## 13. Instalação
+
+Ver `README.md`. Variáveis de ambiente (`.env.example`): `PORT`, `PUBLIC_URL`, `SETUP_TOKEN`, `COOKIE_SECRET`, `DATA_DIR`.
+
+## 14. Testes obrigatórios
+
+`fila.js`, `votos.js` e os importadores têm testes com `node:test`:
+
+1. Quem nunca cantou passa à frente de quem já cantou, mesmo pedindo depois.
+2. Rodadas iguais seguem a ordem de chegada.
+3. Ninguém aparece duas vezes seguidas, inclusive contra o cantor da vez.
+4. Com bypass, pode.
+5. Só sobrou uma pessoa: a fila anda.
+6. VIP com 3 cantadas empata com quem nunca cantou; dois VIPs seguem rodada e chegada.
+7. Pedido novo não tira o `na_vez` do palco.
+8. Ordem manual respeitada; pedidos novos entram depois.
+9. Pulos: volta ao fim da rodada até o limite configurado, depois é removido.
+10. Limite de pendentes configurável; cancelar libera vaga.
+11. Mediana ímpar e par; mínimo de votos configurável.
+12. Votação: sem voto próprio, voto alterável, fecha quando a próxima performance termina.
+13. Ranking de pessoas respeita o mínimo de performances; desempates.
+14. Importador PDF: fixture com linha normal, título colado ao início da letra, letra isolada ("E ..."), título quebrado em linhas, cabeçalho repetido, rodapé com total.
+15. Importador CSV: `,` e `;`, idioma vazio, código duplicado reportado.
+16. Setup: rotas de setup recusam sem token antes do PIN e sem cookie de admin depois.
+
+## 15. Decisões registradas
+
+- Uma festa por instalação; arquivar para reutilizar.
+- Primeiro acesso protegido por `SETUP_TOKEN`.
+- Fila por rodadas; anti-repetição com bypass; ordem manual do admin prevalece.
+- Cantor confirma "Cantou?"; admin pula ausentes.
+- VIP = prioridade leve, várias pessoas, marcado pelo admin.
+- Nota da festa: 0 a 10, mediana, parcial escondida, janela até a próxima performance terminar.
+- Ranking de pessoas: média das medianas com mínimo de performances.
+- Polling em vez de WebSocket.
+- Nome único por festa.
+- Catálogos reais não vão para o repositório (seção 5; ver README).

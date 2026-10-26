@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Karaokê da Helena: admin</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Great+Vibes&amp;family=Montserrat:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;font-family:Montserrat,system-ui,sans-serif}
+a{color:#7C5A12}a:hover{color:#1A1611}
+input::placeholder{color:#8C7D63}
+button{font-family:inherit;cursor:pointer}
+button:disabled{cursor:default;opacity:0.35}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; display: flex; flex-direction: column; background: #F7F0E1; color: #1A1611; font-family: Montserrat, system-ui, sans-serif; overflow: hidden; box-sizing: border-box; border: 1px solid #D9C28A;">
+
+<header style="padding: 14px 20px 10px; display: flex; align-items: center; justify-content: space-between; background: #1A1611; color: #F7F0E1; border-bottom: 1px solid #C49A3C;">
+<div style="display: flex; flex-direction: column;">
+<span style="font-size: 10px; font-weight: 600; letter-spacing: 0.24em; color: #D9B45A;">PAINEL DO ADMIN</span>
+<span style="font-family: 'Great Vibes', cursive; font-size: 36px; line-height: 1;">Helena <span style="font-family: Montserrat, sans-serif; font-size: 15px; font-weight: 700;">45</span></span>
+</div>
+<div style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid #C49A3C; border-radius: 999px; font-size: 12px; font-weight: 600; letter-spacing: 0.1em; color: #D9B45A;">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D9B45A" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+PIN OK
+</div>
+</header>
+
+<main style="flex: 1; overflow-y: auto; padding: 16px 16px 32px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box;">
+
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
+<div style="padding: 10px; border: 1px solid #E3D5B5; border-radius: 12px; background: #FFFBF2; display: flex; flex-direction: column; gap: 2px;">
+<span style="font-size: 22px; font-weight: 700;">{{ naFila }}</span>
+<span style="font-size: 11px; color: #6B5D45;">na fila</span>
+</div>
+<div style="padding: 10px; border: 1px solid #E3D5B5; border-radius: 12px; background: #FFFBF2; display: flex; flex-direction: column; gap: 2px;">
+<span style="font-size: 22px; font-weight: 700;">{{ cantaram }}</span>
+<span style="font-size: 11px; color: #6B5D45;">já cantaram</span>
+</div>
+<div style="padding: 10px; border: 1px solid #E3D5B5; border-radius: 12px; background: #FFFBF2; display: flex; flex-direction: column; gap: 2px;">
+<span style="font-size: 22px; font-weight: 700;">{{ tempoFila }}</span>
+<span style="font-size: 11px; color: #6B5D45;">de fila</span>
+</div>
+</div>
+
+<section aria-label="Música da vez" style="background: #16130F; border: 1px solid #C49A3C; border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 10px; color: #F7F0E1;">
+<div style="display: flex; align-items: center; gap: 10px;">
+<span style="flex: 1; height: 1px; background: #8C6B24;"></span>
+<span style="font-size: 11px; font-weight: 600; letter-spacing: 0.24em; color: #D9B45A;">AGORA NO PALCO</span>
+<span style="flex: 1; height: 1px; background: #8C6B24;"></span>
+</div>
+<sc-if value="{{ temAtual }}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 12px;">
+<div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+<span style="font-family: 'Great Vibes', cursive; font-size: 30px; line-height: 1;">{{ atual.p }}</span>
+<span style="font-size: 16px; font-weight: 700;">{{ atual.titulo }}</span>
+<span style="font-size: 13px; color: #CFC4AE;">{{ atual.artista }}</span>
+</div>
+<div style="display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0;">
+<span style="font-size: 10px; letter-spacing: 0.16em; color: #CFC4AE;">CÓDIGO</span>
+<span style="font-size: 32px; font-weight: 700; color: #D9B45A; font-variant-numeric: tabular-nums; line-height: 1.05;">{{ atual.cod }}</span>
+</div>
+</div>
+<div style="display: flex; gap: 8px; padding-top: 4px;">
+<button type="button" onClick="{{ cantou }}" style="flex: 1; height: 46px; border-radius: 10px; border: 1px solid #D9B45A; background: #D9B45A; color: #1A1611; font-size: 13px; font-weight: 700; letter-spacing: 0.1em;">CANTOU</button>
+<button type="button" onClick="{{ pular }}" style="flex: 1; height: 46px; border-radius: 10px; border: 1px solid #8C6B24; background: transparent; color: #F7F0E1; font-size: 13px; font-weight: 600; letter-spacing: 0.1em;">PULAR AUSENTE</button>
+</div>
+<span style="font-size: 12px; color: #CFC4AE;">{{ dicaPulo }}</span>
+</sc-if>
+<sc-if value="{{ semAtual }}" hint-placeholder-val="{{ false }}">
+<p style="margin: 6px 0; text-align: center; font-family: 'Great Vibes', cursive; font-size: 28px;">Fila vazia</p>
+</sc-if>
+</section>
+
+<section aria-label="Fila completa" style="display: flex; flex-direction: column; gap: 8px;">
+<div style="display: flex; align-items: center; gap: 10px;">
+<h2 style="margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.2em;">FILA</h2>
+<span style="flex: 1; height: 1px; background: #C49A3C;"></span>
+<svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="#1A1611"></path></svg>
+</div>
+<sc-for list="{{ fila }}" as="item" hint-placeholder-count="6">
+<div style="{{ item.rowStyle }}">
+<div style="display: flex; align-items: center; gap: 10px;">
+<span style="width: 28px; height: 28px; flex-shrink: 0; border-radius: 50%; border: 1px solid #C49A3C; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600;">{{ item.pos }}</span>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;">
+<span style="font-size: 15px; font-weight: 600;">{{ item.nome }}</span>
+<span style="font-size: 12px; color: #6B5D45; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ item.musica }}</span>
+</div>
+<button type="button" onClick="{{ item.up }}" disabled="{{ item.noUp }}" aria-label="{{ item.ariaUp }}" style="width: 40px; height: 40px; border-radius: 10px; border: 1px solid #C49A3C; background: #FFFBF2; display: flex; align-items: center; justify-content: center;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A1611" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg>
+</button>
+<button type="button" onClick="{{ item.down }}" disabled="{{ item.noDown }}" aria-label="{{ item.ariaDown }}" style="width: 40px; height: 40px; border-radius: 10px; border: 1px solid #C49A3C; background: #FFFBF2; display: flex; align-items: center; justify-content: center;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A1611" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+</button>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 6px; padding-left: 38px;">
+<button type="button" onClick="{{ item.toggleBypass }}" aria-pressed="{{ item.bypassPressed }}" style="{{ item.bypassStyle }}">Bypass da regra</button>
+<button type="button" onClick="{{ item.toggleVip }}" aria-pressed="{{ item.vipPressed }}" style="{{ item.vipStyle }}">VIP</button>
+<sc-if value="{{ item.temPulo }}" hint-placeholder-val="{{ false }}">
+<span style="height: 32px; display: inline-flex; align-items: center; padding: 0 10px; border-radius: 999px; background: #EFE2C2; font-size: 12px; font-weight: 600; color: #6B4A0E;">Pulou 1x</span>
+</sc-if>
+<sc-if value="{{ item.seguida }}" hint-placeholder-val="{{ false }}">
+<span style="height: 32px; display: inline-flex; align-items: center; padding: 0 10px; border-radius: 999px; background: #F3D9D2; font-size: 12px; font-weight: 600; color: #7A2A1E;">2 seguidas</span>
+</sc-if>
+</div>
+</div>
+</sc-for>
+</section>
+
+<section aria-label="Convidados" style="display: flex; flex-direction: column; gap: 8px;">
+<div style="display: flex; align-items: center; gap: 10px;">
+<h2 style="margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.2em;">CONVIDADOS</h2>
+<span style="flex: 1; height: 1px; background: #C49A3C;"></span>
+<span style="font-size: 12px; color: #6B5D45;">{{ totalPessoas }} no app</span>
+</div>
+<p style="margin: 0; font-size: 12px; color: #6B5D45; line-height: 1.4;">VIP conta sempre como quem ainda não cantou. Vale também para quem ainda não pediu música.</p>
+<sc-for list="{{ pessoas }}" as="pp" hint-placeholder-count="5">
+<div style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 12px; background: #FFFBF2; border: 1px solid #E3D5B5;">
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+<span style="font-size: 15px; font-weight: 600;">{{ pp.nome }}</span>
+<span style="font-size: 12px; color: #6B5D45;">{{ pp.resumo }}</span>
+</div>
+<button type="button" onClick="{{ pp.toggle }}" aria-pressed="{{ pp.pressed }}" aria-label="{{ pp.aria }}" style="{{ pp.style }}">VIP</button>
+</div>
+</sc-for>
+</section>
+
+<section aria-label="Adicionar pedido" style="display: flex; flex-direction: column; gap: 10px; padding: 14px; border: 1px solid #C49A3C; border-radius: 16px; background: #FFFBF2;">
+<h2 style="margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.2em;">ADICIONAR PEDIDO</h2>
+<label for="addNome" style="font-size: 12px; color: #6B5D45;">Para quem? (convidado sem celular)</label>
+<input id="addNome" value="{{ addNome }}" onChange="{{ onAddNome }}" placeholder="Nome" style="height: 46px; border: 1px solid #C49A3C; border-radius: 10px; background: #F7F0E1; padding: 0 14px; font-size: 16px; font-family: Montserrat, sans-serif; color: #1A1611; outline: none;">
+<sc-if value="{{ erroAdd }}" hint-placeholder-val="{{ false }}">
+<span style="font-size: 13px; color: #A12A1E;">Digite o nome antes de adicionar</span>
+</sc-if>
+<label for="addQ" style="font-size: 12px; color: #6B5D45;">Música</label>
+<input id="addQ" value="{{ addQ }}" onChange="{{ onAddQ }}" placeholder="Título, artista ou código" style="height: 46px; border: 1px solid #C49A3C; border-radius: 10px; background: #F7F0E1; padding: 0 14px; font-size: 16px; font-family: Montserrat, sans-serif; color: #1A1611; outline: none;">
+<sc-for list="{{ addRes }}" as="s" hint-placeholder-count="3">
+<div style="display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #E3D5B5;">
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+<span style="font-size: 14px; font-weight: 600;">{{ s.titulo }}</span>
+<span style="font-size: 12px; color: #6B5D45;">{{ s.artista }} · cód. {{ s.cod }}</span>
+</div>
+<button type="button" onClick="{{ s.add }}" aria-label="{{ s.aria }}" style="height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid #C49A3C; background: #1A1611; color: #F7F0E1; font-size: 12px; font-weight: 600;">Adicionar</button>
+</div>
+</sc-for>
+</section>
+</main>
+
+<sc-if value="{{ temToast }}" hint-placeholder-val="{{ false }}">
+<div role="status" style="position: absolute; left: 16px; right: 16px; bottom: 16px; padding: 12px 14px; border-radius: 12px; background: #16130F; border: 1px solid #C49A3C; color: #F7F0E1; font-size: 14px; display: flex; align-items: center; gap: 10px;">
+<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="#D9B45A"></path></svg>
+<span style="flex: 1;">{{ toast }}</span>
+<button type="button" onClick="{{ fecharToast }}" aria-label="Fechar aviso" style="width: 32px; height: 32px; border: 0; background: transparent; color: #F7F0E1; font-size: 18px;">×</button>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+const SONGS = [["4877","CHIQUITITA","Abba","Chiquitita tell me wha...","EUA"],["4574","DANCING QUEEN","Abba","Yeh! you can dance you...","EUA"],["19333","FERNANDO","Abba","Can you hear the drums...","EUA"],["1881","1965 (DUAS TRIBOS)","Legião Urbana","Vou passar quero ver...","BRA"],["9380","ACENDA O FAROL","Tim Maia","Pneu furou acenda o fa...","BRA"],["15721","A FIM DE VOLTAR","Tim Maia","A fim de voltar mas eu...","BRA"],["16041","ALÔ PORTEIRO","Marília Mendonça","Pegue suas coisas que ...","BRA"],["19370","BOHEMIAN RHAPSODY","Queen","Is this the real life ...","EUA"],["9017","CRAZY LITTLE THING CALLED LOVE","Queen","This thing called love...","EUA"],["15882","BANG","Anitta","Vem na maldade com von...","BRA"],["3312","CODINOME BEIJA FLOR","Cazuza","Pra que mentir fingir ...","BRA"],["9383","ÁLIBI","Djavan","Havia mais que um dese...","BRA"],["1648","BOA NOITE","Djavan","Meu ar de dominador","BRA"],["7046","ABALOU","Ivete Sangalo","Você comigo é par é mais","BRA"],["6842","À FLOR DA PELE","Roupa Nova","Ninguém merece solidão...","BRA"],["4858","ALWAYS","Bon Jovi","This Romeo is bleeding...","EUA"],["3002","A FÓRMULA DO AMOR","Kid Abelha","Eu tenho gestos aptos sei","BRA"],["6523","AGORA SÓ FALTA VOCÊ","Rita Lee","Um belo dia resolvi mu...","BRA"],["9086","ALL AT ONCE","Whitney Houston","All at once I fin'lly ...","EUA"]].map(function (a) { return { cod: a[0], titulo: a[1], artista: a[2], inicio: a[3], idioma: a[4] }; });
+const BYCOD = {};
+SONGS.forEach(function (s) { BYCOD[s.cod] = s; });
+function norm(s) { return (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
+function ordenar(peds, sung, last, vips) {
+  const pend = peds.filter(function (x) { return x.st === 'pendente'; }).sort(function (a, b) { return a.t - b.t; });
+  const idx = {};
+  const keyed = pend.map(function (x) {
+    const i = idx[x.p] || 0; idx[x.p] = i + 1;
+    const r = vips.indexOf(x.p) >= 0 ? i : (sung[x.p] || 0) + i;
+    return { x: x, r: r };
+  });
+  keyed.sort(function (a, b) { return a.r - b.r || a.x.t - b.x.t; });
+  const fixed = keyed.filter(function (k) { return k.x.fix != null; }).sort(function (a, b) { return a.x.fix - b.x.fix; }).map(function (k) { return k.x; });
+  const rest = keyed.filter(function (k) { return k.x.fix == null; }).map(function (k) { return k.x; });
+  const out = fixed.slice();
+  let prev = out.length ? out[out.length - 1].p : last;
+  while (rest.length) {
+    let i = rest.findIndex(function (x) { return x.p !== prev || x.bypass; });
+    if (i < 0) i = 0;
+    const x = rest.splice(i, 1)[0];
+    out.push(x); prev = x.p;
+  }
+  return out;
+}
+function seed() {
+  const peds = [
+    { id: 1, p: 'Bia', cod: '4574', t: 1 }, { id: 2, p: 'Léo', cod: '19370', t: 2 }, { id: 3, p: 'Carol', cod: '6842', t: 3 },
+    { id: 4, p: 'Marcos', cod: '9380', t: 4 }, { id: 20, p: 'Ana', cod: '9383', t: 4.5 }, { id: 5, p: 'Duda', cod: '15882', t: 5, pulos: 1 },
+    { id: 6, p: 'Tiago', cod: '4858', t: 6 }, { id: 7, p: 'Bia', cod: '3312', t: 7 }, { id: 8, p: 'Nanda', cod: '16041', t: 8 },
+    { id: 9, p: 'Júlia', cod: '3002', t: 9 }, { id: 10, p: 'Gui', cod: '7046', t: 10 }, { id: 11, p: 'Helena', cod: '9086', t: 11 },
+    { id: 12, p: 'Rafa', cod: '4877', t: 12 }, { id: 13, p: 'Carol', cod: '1648', t: 13 }
+  ].map(function (x) { return Object.assign({ st: 'pendente', fix: null, bypass: false, pulos: 0 }, x); });
+  return { peds: peds, sung: { Helena: 1, Marcos: 1, 'Júlia': 1, Rafa: 1 }, last: 'Rafa', vips: [], extras: ['Lia', 'Caio'],
+    clock: 100, nextId: 100, toast: '', addNome: '', addQ: '', erroAdd: false };
+}
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = seed(); }
+  renderVals() {
+    const s = this.state; const self = this;
+    const ordem = ordenar(s.peds, s.sung, s.last, s.vips);
+    const atualPed = ordem[0];
+    const atual = atualPed ? Object.assign({ p: atualPed.p }, BYCOD[atualPed.cod]) : { p: '', titulo: '', artista: '', cod: '' };
+    const fila = ordem.slice(1).map(function (x, k) {
+      const i = k + 1; const so = BYCOD[x.cod]; const vip = s.vips.indexOf(x.p) >= 0;
+      const seguida = ordem[i - 1].p === x.p;
+      const chip = function (on) { return 'height: 32px; padding: 0 12px; border-radius: 999px; font-size: 12px; font-weight: 600; ' + (on ? 'background: #1A1611; color: #F7F0E1; border: 1px solid #1A1611;' : 'background: transparent; color: #1A1611; border: 1px solid #C49A3C;'); };
+      return { pos: i, nome: x.p + (vip ? ' ♥' : ''), musica: so.titulo + ' · ' + so.artista + ' · ' + so.cod,
+        noUp: i <= 1, noDown: i >= ordem.length - 1,
+        ariaUp: 'Subir ' + x.p, ariaDown: 'Descer ' + x.p,
+        up: function () { self.mover(x.id, -1); }, down: function () { self.mover(x.id, 1); },
+        bypassPressed: x.bypass ? 'true' : 'false', bypassStyle: chip(x.bypass), toggleBypass: function () { self.toggleBypass(x.id); },
+        vipPressed: vip ? 'true' : 'false', vipStyle: chip(vip), toggleVip: function () { self.toggleVip(x.p); },
+        temPulo: x.pulos > 0, seguida: seguida,
+        rowStyle: 'display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: 12px; background: #FFFBF2; border: 1px solid ' + (seguida ? '#C77A6A' : '#E3D5B5') + ';' };
+    });
+    const qn = norm(s.addQ.trim());
+    const addRes = qn ? SONGS.filter(function (so) { return norm(so.titulo + ' ' + so.artista + ' ' + so.cod).indexOf(qn) >= 0; }).slice(0, 3).map(function (so) {
+      return Object.assign({}, so, { aria: 'Adicionar ' + so.titulo, add: function () { self.adicionar(so.cod); } });
+    }) : [];
+    const nomes = [];
+    s.peds.forEach(function (x) { if (nomes.indexOf(x.p) < 0) nomes.push(x.p); });
+    Object.keys(s.sung).concat(s.extras).forEach(function (p) { if (nomes.indexOf(p) < 0) nomes.push(p); });
+    nomes.sort(function (a, b) { return a.localeCompare(b, 'pt'); });
+    const pessoas = nomes.map(function (p) {
+      const vip = s.vips.indexOf(p) >= 0;
+      const c = (s.sung[p] || 0) + s.peds.filter(function (x) { return x.p === p && x.st === 'cantou'; }).length;
+      const f = s.peds.filter(function (x) { return x.p === p && x.st === 'pendente'; }).length;
+      return { nome: p + (vip ? ' ♥' : ''), resumo: 'cantou ' + c + 'x · ' + (f ? f + ' na fila' : 'sem pedido'),
+        pressed: vip ? 'true' : 'false', aria: (vip ? 'Tirar VIP de ' : 'Tornar VIP ') + p, toggle: function () { self.toggleVip(p); },
+        style: 'height: 40px; min-width: 64px; padding: 0 12px; border-radius: 999px; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; ' + (vip ? 'background: #1A1611; color: #D9B45A; border: 1px solid #1A1611;' : 'background: transparent; color: #1A1611; border: 1px solid #C49A3C;') };
+    });
+    const cantaram = s.peds.filter(function (x) { return x.st === 'cantou'; }).length + 4;
+    const min = ordem.length * 4;
+    return {
+      naFila: ordem.length, cantaram: cantaram, tempoFila: min >= 60 ? Math.floor(min / 60) + 'h' + String(min % 60).padStart(2, '0') : min + ' min',
+      temAtual: !!atualPed, semAtual: !atualPed, atual: atual,
+      dicaPulo: atualPed && atualPed.pulos > 0 ? atualPed.p + ' já foi pulado 1x: um novo pulo tira o pedido da fila.' : 'Pular manda o pedido para o fim da rodada. No 2º pulo, sai da fila.',
+      cantou: function () { self.cantou(atualPed); }, pular: function () { self.pular(atualPed); },
+      fila: fila, pessoas: pessoas, totalPessoas: pessoas.length,
+      addNome: s.addNome, addQ: s.addQ, erroAdd: s.erroAdd, addRes: addRes,
+      onAddNome: function (e) { self.setState({ addNome: e.target.value, erroAdd: false }); },
+      onAddQ: function (e) { self.setState({ addQ: e.target.value }); },
+      temToast: !!s.toast, toast: s.toast, fecharToast: function () { self.setState({ toast: '' }); }
+    };
+  }
+  upd(id, patch) { return this.state.peds.map(function (x) { return x.id === id ? Object.assign({}, x, patch) : x; }); }
+  cantou(ped) {
+    if (!ped) return;
+    const sung = Object.assign({}, this.state.sung); sung[ped.p] = (sung[ped.p] || 0) + 1;
+    this.setState({ peds: this.upd(ped.id, { st: 'cantou', fix: null }), sung: sung, last: ped.p, toast: ped.p + ' cantou. Fila avançou.' });
+  }
+  pular(ped) {
+    if (!ped) return;
+    if (ped.pulos >= 1) { this.setState({ peds: this.upd(ped.id, { st: 'pulado', fix: null }), toast: ped.p + ' saiu da fila (2º pulo).' }); return; }
+    this.setState({ peds: this.upd(ped.id, { pulos: 1, t: this.state.clock, fix: null }), clock: this.state.clock + 1, toast: ped.p + ' foi para o fim da rodada.' });
+  }
+  mover(id, dir) {
+    const s = this.state;
+    const ordem = ordenar(s.peds, s.sung, s.last, s.vips);
+    const ids = ordem.map(function (x) { return x.id; });
+    const i = ids.indexOf(id); const j = i + dir;
+    if (j < 0 || j >= ids.length) return;
+    const tmp = ids[i]; ids[i] = ids[j]; ids[j] = tmp;
+    const peds = s.peds.map(function (x) { const k = ids.indexOf(x.id); return k >= 0 ? Object.assign({}, x, { fix: k }) : x; });
+    this.setState({ peds: peds, toast: 'Ordem ajustada manualmente.' });
+  }
+  toggleBypass(id) {
+    const x = this.state.peds.find(function (p) { return p.id === id; });
+    this.setState({ peds: this.upd(id, { bypass: !x.bypass }), toast: x.bypass ? 'Regra de 2 seguidas volta a valer para ' + x.p + '.' : x.p + ' pode cantar mesmo logo depois de si.' });
+  }
+  toggleVip(p) {
+    const v = this.state.vips; const on = v.indexOf(p) >= 0;
+    this.setState({ vips: on ? v.filter(function (n) { return n !== p; }) : v.concat([p]), toast: on ? p + ' deixou de ser VIP.' : p + ' agora é VIP: conta sempre como quem ainda não cantou.' });
+  }
+  adicionar(cod) {
+    const s = this.state; const n = s.addNome.trim();
+    if (!n) { this.setState({ erroAdd: true }); return; }
+    this.setState({ peds: s.peds.concat([{ id: s.nextId, p: n, cod: cod, t: s.clock, st: 'pendente', fix: null, bypass: false, pulos: 0 }]),
+      nextId: s.nextId + 1, clock: s.clock + 1, addNome: '', addQ: '', toast: BYCOD[cod].titulo + ' adicionada para ' + n + '.' });
+  }
+}
+</script>
+</body>
+</html>

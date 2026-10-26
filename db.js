@@ -70,6 +70,11 @@ const MIGRACOES = [
 
   INSERT INTO meta (chave, valor) VALUES ('versao', '0');
   `,
+  // Reimportar o catálogo com a festa aberta: músicas que sumiram mas já têm pedidos
+  // ficam na tabela (chave estrangeira, ranking), escondidas da busca.
+  `
+  ALTER TABLE musicas ADD COLUMN fora_do_catalogo INTEGER NOT NULL DEFAULT 0;
+  `,
 ];
 
 export function migrar(db) {

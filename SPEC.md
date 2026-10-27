@@ -39,12 +39,13 @@ O setup mostra a capacidade estimada da festa: `músicas = duração_em_min / mi
 | Servidor | Node 20 + Express | Front e back em JS |
 | Banco | SQLite via `better-sqlite3` | Uma festa, um processo, backup é copiar um arquivo |
 | Front | HTML + CSS + JS puro, sem build | Poucas telas |
-| Tempo real | Polling a cada 4 s com versão (9.1) | ~50 clientes = ~12 req/s |
+| Tempo real | Polling a cada 4 s com versão (10.1) | ~50 clientes = ~12 req/s |
 | Uploads | `multer` em disco (`data/uploads/`) | Arte da festa e arquivo do catálogo |
 | QR code | `qrcode` (gera PNG/SVG no servidor) | Para imprimir |
 | PDF do catálogo | `pdftotext` (pacote `poppler-utils`) chamado via `child_process` | Extrai o texto preservando colunas |
 | Proxy/TLS | Caddy | HTTPS automático |
 | Processo | pm2 ou systemd | Reinício automático |
+| E-mail (opcional) | `nodemailer` via SMTP do `.env` | Ranking final por e-mail (9.1) |
 
 Estrutura:
 
@@ -277,6 +278,13 @@ Toda escrita incrementa `meta.versao`.
 - **Performances:** `cantou`, votação fechada, votos ≥ mínimo; mediana desc, empate por número de votos.
 - **Pessoas:** pessoas com performances com nota ≥ mínimo configurado (padrão 2); média das medianas (1 casa); empate pela melhor performance, depois número de performances. Se vazio, a aba abre em Performances com aviso.
 
+### 9.1 Ranking por e-mail
+- Opcional: só existe com SMTP configurado no `.env` (`SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`) e com a votação ligada; senão o campo não aparece (`email_ranking: false` em `GET /api/festa`).
+- Na aba Ranking, com a festa aberta, o convidado pode deixar um e-mail (validação simples, até 254 caracteres) e removê-lo depois. Texto obrigatório junto do campo: "Usamos seu e-mail só para mandar o ranking desta festa quando ela terminar. Depois do envio, ele é apagado."
+- Ao encerrar a festa, o app envia em segundo plano para cada pessoa com e-mail: a colocação dela no ranking de pessoas (se estiver nele), os 10 primeiros de Pessoas e de Performances e o link da festa. Assunto: "Ranking final · {título}".
+- Enviou, apaga o e-mail. Falhou, o e-mail fica e o envio é tentado de novo quando o app reinicia com a festa encerrada. Arquivar a festa apaga os e-mails restantes antes do backup.
+- O admin não vê os e-mails.
+
 ## 10. API
 
 JSON. Erros: `{ "erro": "codigo", "mensagem": "texto para a tela" }`.
@@ -290,9 +298,11 @@ JSON. Erros: `{ "erro": "codigo", "mensagem": "texto para a tela" }`.
 | `GET /api/festa` | | dados públicos: status, título, nome em destaque, subtítulo, data, local, url da arte, tema, regras visíveis |
 | `GET /api/festa/arte` | | a imagem |
 | `POST /api/pessoas` | `{nome}` | `201` + cookie; `409 nome_em_uso`; `403 festa_fechada` |
-| `GET /api/estado` | | `{versao, me, atual, proximos[10], total_fila, meus_pedidos[], votacoes[], limite}` |
+| `GET /api/estado` | | `{versao, me: {nome, vip, email}, atual, proximos[10], total_fila, meus_pedidos[], votacoes[], limite}` |
 | `GET /api/musicas?q=&filtro=&artista=&offset=` | | página de até 20 + `total` + `offset` (5.4, 5.5) |
 | `GET /api/artistas?filtro=` | | `{artistas: [{nome, chave, total}]}` em ordem A–Z (5.5) |
+| `PUT /api/me/email` | `{email}` | `200 {email}`; `email_invalido`, `email_desligado`, `festa_fechada` (9.1) |
+| `DELETE /api/me/email` | | `204` |
 | `GET /api/sugestao` | | `{sugestao: {musica, artista} \| null}` para o convidado do cookie (5.6) |
 | `POST /api/pedidos` | `{musica_cod}` | `201 {pedido, posicao_estimada}`; `limite_atingido`, `ja_pedida`, `musica_inexistente` |
 | `DELETE /api/pedidos/:id` | | `204` |

@@ -132,6 +132,7 @@ export async function arquivarFesta(db, dataDir, { manterCatalogo = true } = {})
   const base = `${(festa.inicio_em ?? new Date().toISOString()).slice(0, 10)}-${slug(festa.titulo || festa.nome_destaque)}`;
   let destino = path.join(pasta, `${base}.db`);
   for (let n = 2; fs.existsSync(destino); n++) destino = path.join(pasta, `${base}-${n}.db`);
+  db.prepare('UPDATE pessoas SET email = NULL').run(); // e-mail não vai para o arquivo (SPEC 9.1)
   await db.backup(destino);
 
   escrever(db, () => {

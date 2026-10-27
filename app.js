@@ -10,12 +10,21 @@ import { rotasSetup } from './rotas/setup.js';
 import { rotasFesta } from './rotas/festa.js';
 import { rotasAdmin } from './rotas/admin.js';
 import { rotasPublicas } from './rotas/publico.js';
+import { criarEnvioRanking, transporteSmtp } from './email.js';
 
-// config: { dataDir, publicUrl, setupToken, cookieSecret, cookiesSeguros }
+// config: { dataDir, publicUrl, setupToken, cookieSecret, cookiesSeguros, smtp?, transporteEmail? }
 export function criarApp({ db, config }) {
   garantirFesta(db);
   const auth = criarAuth({ config, lerPinHash: () => lerFesta(db).admin_pin_hash });
-  const ctx = { db, config, auth };
+  const email = criarEnvioRanking({
+    db,
+    transporte: config.transporteEmail ?? (config.smtp ? transporteSmtp(config.smtp) : null),
+    de: config.smtp?.de,
+    link: new URL('/', config.publicUrl).href,
+  });
+  // Se o app caiu no meio de um envio, termina ao subir de novo.
+  if (email.ativo && lerFesta(db).status === 'encerrada') setImmediate(() => email.enviarRankings());
+  const ctx = { db, config, auth, email };
 
   const app = express();
   app.set('trust proxy', 'loopback'); // Caddy na frente

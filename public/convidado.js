@@ -157,7 +157,10 @@ function montarFesta() {
         <div id="mais-busca" class="sec centro" style="padding: 12px;"></div>
       </div>
       <div class="pilha" data-aba="meus"></div>
-      <div class="pilha" data-aba="ranking" style="gap: 10px;"></div>
+      <div class="pilha" data-aba="ranking" style="gap: 16px;">
+        <div class="pilha" id="ranking-lista" style="gap: 10px;"></div>
+        <div id="ranking-email"></div>
+      </div>
     </main>
     <nav class="menu" aria-label="Seções"><div class="menu-dentro" id="menu"></div></nav>`;
 
@@ -215,7 +218,10 @@ function atualizar() {
   if (s.aba === 'fila') renderFila();
   if (s.aba === 'busca') renderBusca();
   if (s.aba === 'meus') renderMeus();
-  if (s.aba === 'ranking') renderRanking($('[data-aba="ranking"]'));
+  if (s.aba === 'ranking') {
+    renderRanking($('#ranking-lista'));
+    renderEmail();
+  }
 }
 
 // ---------- Fila ----------
@@ -587,6 +593,54 @@ async function renderRanking(alvo, final = false) {
     ${abertas.map((v) => `<p class="aviso" style="margin-top: 4px;">Votação aberta para ${esc(v.cantor)} (${esc(v.titulo)}). Entra no ranking quando a próxima performance terminar.</p>`).join('')}`;
 }
 
+// Ranking por e-mail (SPEC 9.1). Só redesenha quando o e-mail salvo muda, para não apagar o que está sendo digitado.
+let emailDesenhado;
+function renderEmail() {
+  const alvo = $('#ranking-email');
+  const ativo = s.festa.email_ranking && s.estado.status === 'aberta';
+  const email = s.estado.me?.email ?? null;
+  const chave = ativo ? `on:${email ?? ''}` : 'off';
+  if (chave === emailDesenhado && alvo.childElementCount) return;
+  emailDesenhado = chave;
+  if (!ativo) {
+    alvo.innerHTML = '';
+    return;
+  }
+  const aviso = 'Usamos seu e-mail só para mandar o ranking desta festa quando ela terminar. Depois do envio, ele é apagado.';
+  if (email) {
+    alvo.innerHTML = `
+      <div class="cartao-decor pilha" style="gap: 10px;">
+        <span class="destaque" style="font-size: 22px;">Ranking por e-mail</span>
+        <span>Vamos mandar o ranking final para <strong>${esc(email)}</strong> quando a festa terminar.</span>
+        <button type="button" class="btn btn-alerta btn-pequeno" data-acao="sem-email" style="align-self: flex-start;">Não quero mais</button>
+      </div>`;
+    return;
+  }
+  alvo.innerHTML = `
+    <form class="cartao-decor pilha" id="form-email" style="gap: 10px;" novalidate>
+      <span class="destaque" style="font-size: 22px;">Quer o ranking final por e-mail?</span>
+      <div class="campo">
+        <label for="email">Seu e-mail</label>
+        <input id="email" class="entrada" type="email" inputmode="email" autocomplete="email" maxlength="254" placeholder="voce@exemplo.com">
+      </div>
+      <button type="submit" class="btn">Quero receber</button>
+      <span class="sec" style="font-size: 12px;">${aviso}</span>
+    </form>`;
+  $('#form-email').onsubmit = async (ev) => {
+    ev.preventDefault();
+    const botao = ev.submitter;
+    botao.disabled = true;
+    try {
+      await api('PUT', '/api/me/email', { email: $('#email').value });
+      avisar('Combinado! O ranking chega no seu e-mail quando a festa terminar.');
+      await poll.agora();
+    } catch (e) {
+      avisar(e.message);
+      botao.disabled = false;
+    }
+  };
+}
+
 const formatar = (n) => (n == null ? '' : (Math.round(n * 10) / 10).toFixed(1).replace('.', ','));
 
 // ---------- Encerrada ----------
@@ -638,6 +692,10 @@ async function aoClicar(ev) {
       const artista = artistasFiltrados()[Number(b.dataset.i)];
       if (artista) trocarModo('musicas', { nome: artista.nome, chave: artista.chave });
       return;
+    } else if (acao === 'sem-email') {
+      b.disabled = true;
+      await api('DELETE', '/api/me/email');
+      avisar('Pronto, apagamos seu e-mail.');
     } else if (acao === 'sem-artista') {
       return trocarModo('musicas');
     } else if (acao === 'tipo-ranking') {

@@ -81,6 +81,10 @@ const MIGRACOES = [
   `
   UPDATE musicas SET busca = normalizar_busca(titulo || ' ' || artista || ' ' || inicio || ' ' || cod);
   `,
+  // Ranking final por e-mail (SPEC 9.1): guardado só até o envio.
+  `
+  ALTER TABLE pessoas ADD COLUMN email TEXT;
+  `,
 ];
 
 export function migrar(db) {

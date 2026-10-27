@@ -320,3 +320,10 @@ test('encerrada: pedidos e votos bloqueados, ranking continua', async () => {
   assert.equal((await caio.chamar('GET', '/api/ranking')).status, 200);
   assert.equal((await estado(caio)).status, 'encerrada');
 });
+
+test('sem SMTP configurado, o e-mail do ranking fica desligado', async () => {
+  assert.equal((await ana.chamar('GET', '/api/festa')).dados.email_ranking, false);
+  const r = await ana.chamar('PUT', '/api/me/email', { corpo: { email: 'ana@exemplo.com' } });
+  assert.equal(r.status, 404);
+  assert.equal(r.dados.erro, 'email_desligado');
+});

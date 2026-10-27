@@ -7,6 +7,7 @@ import { lerFesta } from '../festa.js';
 import { normalizar, normalizarBusca } from '../texto.js';
 import { formatarNota } from '../votos.js';
 import { listarArtistas, sugerir } from '../artistas.js';
+import { validarEmail } from '../email.js';
 import {
   pedidoNaVez, filaOrdenada, pedir, cancelar, cantou, votar, votacoesAbertas, ranking,
 } from '../operacao.js';
@@ -17,7 +18,7 @@ const DIA_MS = 24 * 60 * 60 * 1000;
 
 export function pessoaDoCookie(db, req) {
   const kid = req.cookies?.kid;
-  return kid ? db.prepare('SELECT id, nome, vip FROM pessoas WHERE id = ?').get(kid) ?? null : null;
+  return kid ? db.prepare('SELECT id, nome, vip, email FROM pessoas WHERE id = ?').get(kid) ?? null : null;
 }
 
 export function exigirPessoa(db) {
@@ -88,7 +89,7 @@ function validadeKid(festa) {
   return new Date(Math.max(Number.isNaN(fim) ? 0 : fim, Date.now() + DIA_MS));
 }
 
-export function rotasPublicas({ db, config, auth }) {
+export function rotasPublicas({ db, config, auth, email }) {
   const r = express.Router();
   const comPessoa = exigirPessoa(db);
 
@@ -138,6 +139,22 @@ export function rotasPublicas({ db, config, auth }) {
     const filtro = String(req.query.filtro ?? '');
     if (!['', 'nacionais', 'internacionais'].includes(filtro)) throw erro(422, 'filtro_invalido', 'Filtro inválido.');
     res.json({ artistas: listarArtistas(db, { filtro }) });
+  });
+
+  // Ranking final por e-mail (SPEC 9.1).
+  const exigirEmailAberto = () => {
+    if (!email?.ativo || !lerFesta(db).regras.votacao) throw erro(404, 'email_desligado', 'O envio do ranking por e-mail não está disponível.');
+    if (lerFesta(db).status !== 'aberta') throw erro(403, 'festa_fechada', 'A festa não está aberta.');
+  };
+  r.put('/me/email', comPessoa, (req, res) => {
+    exigirEmailAberto();
+    const valor = validarEmail(req.body?.email);
+    escrever(db, () => db.prepare('UPDATE pessoas SET email = ? WHERE id = ?').run(valor, req.pessoa.id));
+    res.json({ email: valor });
+  });
+  r.delete('/me/email', comPessoa, (req, res) => {
+    escrever(db, () => db.prepare('UPDATE pessoas SET email = NULL WHERE id = ?').run(req.pessoa.id));
+    res.status(204).end();
   });
 
   r.get('/sugestao', comPessoa, (req, res) => {
@@ -211,7 +228,7 @@ export function estadoPublico(db, pessoa) {
   return {
     versao: lerVersao(db),
     status: festa.status,
-    me: pessoa ? { nome: pessoa.nome, vip: Boolean(pessoa.vip) } : null,
+    me: pessoa ? { nome: pessoa.nome, vip: Boolean(pessoa.vip), email: pessoa.email ?? null } : null,
     atual: naVez ? pedidoPublico(naVez, me) : null,
     proximos: fila.slice(0, PROXIMOS).map((p) => pedidoPublico(p, me)),
     total_fila: fila.length,

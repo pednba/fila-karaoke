@@ -6,7 +6,7 @@ import { erro } from '../erros.js';
 import { escrever } from '../db.js';
 import { estadoSetup, lerFesta, arquivarFesta } from '../festa.js';
 
-export function rotasFesta({ db, config, auth }) {
+export function rotasFesta({ db, config, auth, email }) {
   const r = express.Router();
 
   // Dados públicos (SPEC 10.2).
@@ -25,6 +25,7 @@ export function rotasFesta({ db, config, auth }) {
       tema: f.tema,
       regras: { pendentes_por_pessoa, minutos_por_musica, votacao, ranking_pessoas, minimo_votos, minimo_performances },
       admin_configurado: Boolean(f.admin_pin_hash), // /admin decide entre login e setup
+      email_ranking: Boolean(email?.ativo && votacao), // SPEC 9.1
     });
   });
 
@@ -55,6 +56,7 @@ export function rotasFesta({ db, config, auth }) {
       db.prepare("UPDATE festa SET status = 'encerrada', atualizado_em = datetime('now') WHERE id = 1").run();
       db.prepare('UPDATE pedidos SET votacao_aberta = 0 WHERE votacao_aberta = 1').run();
     });
+    email?.enviarRankings(); // em segundo plano: a resposta não espera os e-mails
     res.json({ status: 'encerrada' });
   });
 

@@ -10,6 +10,14 @@ const config = {
   setupToken: process.env.SETUP_TOKEN,
   cookieSecret: process.env.COOKIE_SECRET,
   dataDir: process.env.DATA_DIR || './data',
+  // Ranking final por e-mail (opcional). Sem SMTP_HOST/USER/PASS, o campo de e-mail não aparece.
+  smtp: {
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT || 465),
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+    de: process.env.SMTP_FROM || process.env.SMTP_USER,
+  },
 };
 config.cookiesSeguros = config.publicUrl.startsWith('https://');
 

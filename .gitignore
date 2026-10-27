@@ -13,3 +13,4 @@ integracoes/maquina.json
 integracoes/codigos.json
 integracoes/ultimo_comando.txt
 __pycache__/
+*.local.md

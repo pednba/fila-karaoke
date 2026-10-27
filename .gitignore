@@ -9,3 +9,7 @@ data/catalogos/*
 *.db-shm
 *.pdf
 .DS_Store
+integracoes/maquina.json
+integracoes/codigos.json
+integracoes/ultimo_comando.txt
+__pycache__/

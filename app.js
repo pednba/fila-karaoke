@@ -11,8 +11,9 @@ import { rotasFesta } from './rotas/festa.js';
 import { rotasAdmin } from './rotas/admin.js';
 import { rotasPublicas } from './rotas/publico.js';
 import { criarEnvioRanking, transporteSmtp } from './email.js';
+import { criarMaquina } from './maquina.js';
 
-// config: { dataDir, publicUrl, setupToken, cookieSecret, cookiesSeguros, smtp?, transporteEmail? }
+// config: { dataDir, publicUrl, setupToken, cookieSecret, cookiesSeguros, smtp?, transporteEmail?, maquinaToken? }
 export function criarApp({ db, config }) {
   garantirFesta(db);
   const auth = criarAuth({ config, lerPinHash: () => lerFesta(db).admin_pin_hash });
@@ -24,7 +25,8 @@ export function criarApp({ db, config }) {
   });
   // Se o app caiu no meio de um envio, termina ao subir de novo.
   if (email.ativo && lerFesta(db).status === 'encerrada') setImmediate(() => email.enviarRankings());
-  const ctx = { db, config, auth, email };
+  const maquina = criarMaquina({ db, token: config.maquinaToken });
+  const ctx = { db, config, auth, email, maquina };
 
   const app = express();
   app.set('trust proxy', 'loopback'); // Caddy na frente
@@ -35,6 +37,7 @@ export function criarApp({ db, config }) {
   app.use('/api/setup', rotasSetup(ctx));
   app.use('/api/festa', rotasFesta(ctx));
   app.use('/api/admin', rotasAdmin(ctx));
+  app.use('/api/maquina', maquina.rotas);
   app.use('/api', rotasPublicas(ctx));
 
   // Tema da festa como variáveis CSS (SPEC 11), usado por todas as telas.

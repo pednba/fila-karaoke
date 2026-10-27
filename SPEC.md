@@ -327,6 +327,15 @@ JSON. Erros: `{ "erro": "codigo", "mensagem": "texto para a tela" }`.
 ### 10.4 Operação (admin)
 `POST /api/admin/login`, `GET /api/admin/estado`, `POST /api/admin/cantou`, `POST /api/admin/pular`, `POST /api/admin/pedidos/:id/mover {direcao}`, `PATCH /api/admin/pedidos/:id {bypass}`, `GET /api/admin/pessoas`, `PATCH /api/admin/pessoas/:id {vip}`, `POST /api/admin/pedidos {nome, musica_cod}`.
 
+### 10.5 Máquina de karaokê (opcional)
+Um script fora do app (`integracoes/`) roda num aparelho ao lado da máquina e manda o código por infravermelho (Broadlink). Liga com `MAQUINA_TOKEN` no `.env` (pelo menos 16 caracteres); sem ele, as rotas respondem `404 maquina_desligada` e o admin não mostra nada da máquina.
+
+- A máquina recebe **só o pedido `na_vez`**: ela nunca guarda fila própria. Cada vez que um pedido vira `na_vez`, nasce um comando novo `{id, cod}`. O `id` muda também quando o admin pede "Reenviar código".
+- `GET /api/maquina/comando?feito=<id>` com o cabeçalho `X-Maquina-Token`: devolve `{comando: {id, cod, titulo, cantor} | null}` (`null` sem `na_vez` ou com a festa fora de `aberta`). `feito` é o último comando que o script já mandou; token errado: `401 token_invalido`.
+- O script guarda o último `id` feito num arquivo e só manda o código quando o `id` muda; ao reiniciar, não repete.
+- Admin: indicador "Máquina conectada" (o script consultou nos últimos 30 segundos), "Código enviado" ou "Enviando…" (o `feito` informado é o comando atual) e o botão "Reenviar código" (`POST /api/admin/maquina/reenviar`, incrementa `meta.maquina_reenvio`).
+- Plano B: o operador digita no controle o código grande mostrado no palco.
+
 ## 11. Visual e temas
 
 O tema é um conjunto de tokens CSS aplicado como variáveis em `:root` a partir de `festa.tema`.
@@ -376,11 +385,11 @@ Referência visual: `docs/design/` (formato do protótipo; ver o LEIA-ME de lá)
 
 ### Admin (`/admin`)
 - Sem PIN configurado: assistente de setup (seção 4).
-- Com festa: Operação (contadores, palco com Cantou/Pular, fila com ↑ ↓, Bypass, VIP, selos, convidados, adicionar pedido) e um menu Festa (editar dados, visual, catálogo, regras, QR, encerrar, arquivar).
+- Com festa: Operação (contadores, palco com Cantou/Pular e, com a máquina ligada (10.5), o estado da máquina e "Reenviar código", fila com ↑ ↓, Bypass, VIP, selos, convidados, adicionar pedido) e um menu Festa (editar dados, visual, catálogo, regras, QR, encerrar, arquivar).
 
 ## 13. Instalação
 
-Ver `README.md`. Variáveis de ambiente (`.env.example`): `PORT`, `PUBLIC_URL`, `SETUP_TOKEN`, `COOKIE_SECRET`, `DATA_DIR`.
+Ver `README.md`. Variáveis de ambiente (`.env.example`): `PORT`, `PUBLIC_URL`, `SETUP_TOKEN`, `COOKIE_SECRET`, `DATA_DIR`; opcionais `SMTP_*` (9.1) e `MAQUINA_TOKEN` (10.5).
 
 ## 14. Testes obrigatórios
 
@@ -413,5 +422,6 @@ Ver `README.md`. Variáveis de ambiente (`.env.example`): `PORT`, `PUBLIC_URL`, 
 - Nota da festa: 0 a 10, mediana, parcial escondida, janela até a próxima performance terminar.
 - Ranking de pessoas: média das medianas com mínimo de performances.
 - Polling em vez de WebSocket.
+- Máquina de karaokê recebe só o código da vez, nunca a fila (10.5).
 - Nome único por festa.
 - Catálogos reais não vão para o repositório (seção 5; ver README).

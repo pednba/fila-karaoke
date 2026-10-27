@@ -138,7 +138,8 @@ function renderOperacao() {
         <button type="button" class="btn btn-palco cresce" style="height: 46px;" data-acao="cantou" ${fechada ? 'disabled' : ''}>Cantou</button>
         <button type="button" class="btn btn-palco-claro cresce" style="height: 46px;" data-acao="pular" ${fechada ? 'disabled' : ''}>Pular ausente</button>
       </div>
-      <span class="sub" style="font-size: 12px;">${esc(dica)}</span>`
+      <span class="sub" style="font-size: 12px;">${esc(dica)}</span>
+      ${linhaMaquina(e.maquina, fechada)}`
     : '<p class="destaque palco-livre">Fila vazia</p>';
 
   const vipLigado = Boolean(r.vip);
@@ -298,6 +299,18 @@ function renderFesta() {
 
 // ---------- Ações ----------
 
+// Máquina de karaokê (SPEC 10.5): só aparece com MAQUINA_TOKEN no servidor.
+function linhaMaquina(m, fechada) {
+  if (!m) return '';
+  const texto = !m.conectada ? 'Máquina desconectada: digite o código no controle'
+    : m.enviado ? 'Máquina conectada · código enviado' : 'Máquina conectada · enviando código…';
+  return `
+      <div class="entre" style="gap: 8px; padding-top: 4px;">
+        <span class="sub" style="font-size: 12px;" role="status">${texto}</span>
+        <button type="button" class="btn btn-palco-claro btn-pequeno" data-acao="reenviar" ${fechada ? 'disabled' : ''}>Reenviar código</button>
+      </div>`;
+}
+
 async function aoClicar(ev) {
   const b = ev.target.closest('[data-acao]');
   if (!b || b.disabled) return;
@@ -308,6 +321,9 @@ async function aoClicar(ev) {
     if (acao === 'cantou') {
       await api('POST', '/api/admin/cantou');
       avisar(`${a.cantor} cantou. Fila avançou.`, { baixo: true });
+    } else if (acao === 'reenviar') {
+      await api('POST', '/api/admin/maquina/reenviar');
+      avisar(`Código ${a.cod} reenviado para a máquina.`, { baixo: true });
     } else if (acao === 'pular') {
       const r = await api('POST', '/api/admin/pular');
       avisar(r.status === 'removido' ? `${a.cantor} saiu da fila depois de ${r.pulos} pulos.` : `${a.cantor} foi para o fim da rodada.`, { baixo: true });

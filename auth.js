@@ -26,7 +26,7 @@ export function verificarPin(pin, guardado) {
   return crypto.timingSafeEqual(hash, esperado);
 }
 
-function iguais(a, b) {
+export function iguais(a, b) {
   const ha = crypto.createHash('sha256').update(String(a)).digest();
   const hb = crypto.createHash('sha256').update(String(b)).digest();
   return crypto.timingSafeEqual(ha, hb);

@@ -13,7 +13,7 @@ import {
 
 const idDe = (req) => Number(req.params.id);
 
-export function rotasAdmin({ db, auth }) {
+export function rotasAdmin({ db, auth, maquina }) {
   const r = express.Router();
 
   r.post('/login', auth.limitarLogin, (req, res) => {
@@ -26,12 +26,18 @@ export function rotasAdmin({ db, auth }) {
 
   r.use(auth.exigirAdmin);
 
-  // Mesmo polling do convidado: ETag pela versão.
+  // Mesmo polling do convidado: ETag pela versão e, com a máquina ligada, pelo estado dela (SPEC 10.5).
   r.get('/estado', (req, res) => {
-    const etag = `"${lerVersao(db)}-adm"`;
+    const m = maquina?.status() ?? null;
+    const etag = `"${lerVersao(db)}-adm${m ? `-${Number(m.conectada)}${Number(m.enviado)}` : ''}"`;
     res.set({ ETag: etag, 'Cache-Control': 'no-cache' });
     if (req.get('If-None-Match') === etag) return res.status(304).end();
-    res.json(estadoAdmin(db));
+    res.json({ ...estadoAdmin(db), maquina: m });
+  });
+
+  r.post('/maquina/reenviar', (req, res) => {
+    escrever(db, () => maquina.reenviar());
+    res.json({ ok: true });
   });
 
   r.post('/cantou', (req, res) => {

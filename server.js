@@ -18,6 +18,8 @@ const config = {
     pass: process.env.SMTP_PASS,
     de: process.env.SMTP_FROM || process.env.SMTP_USER,
   },
+  // Máquina de karaokê por infravermelho (opcional, SPEC 10.5).
+  maquinaToken: process.env.MAQUINA_TOKEN || null,
 };
 config.cookiesSeguros = config.publicUrl.startsWith('https://');
 
@@ -27,6 +29,11 @@ for (const [nome, valor] of [['SETUP_TOKEN', config.setupToken], ['COOKIE_SECRET
     console.error(`Defina ${nome} no .env (pelo menos 16 caracteres). Gere com: openssl rand -hex 24`);
     process.exit(1);
   }
+}
+
+if (config.maquinaToken && config.maquinaToken.length < 16) {
+  console.error('MAQUINA_TOKEN precisa de pelo menos 16 caracteres. Gere com: openssl rand -hex 24');
+  process.exit(1);
 }
 
 const db = abrirBanco(`${config.dataDir}/karaoke.db`);

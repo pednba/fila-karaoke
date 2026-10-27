@@ -3,7 +3,7 @@
 App web genérico de fila de karaokê para festas. A fonte da verdade é `SPEC.md`: leia inteira antes de escrever código e não invente regra que não esteja lá. Se algo estiver ambíguo, pergunte.
 
 ## Stack fixa
-Node 20, Express, better-sqlite3, HTML/CSS/JS puro em `public/` (sem bundler nem framework de front), Caddy na frente (ou nginx, quando a máquina já usa as portas 80/443; ver `deploy/`), pm2 ou systemd. Dependências permitidas: express, better-sqlite3, cookie-parser, dotenv, multer, qrcode, sharp (redimensionar a arte), nodemailer (ranking por e-mail, SMTP opcional). Testes com `node:test`.
+Node 20, Express, better-sqlite3, HTML/CSS/JS puro em `public/` (sem bundler nem framework de front), Caddy na frente (ou nginx, quando a máquina já usa as portas 80/443; ver `deploy/`), pm2 ou systemd. Dependências permitidas: express, better-sqlite3, cookie-parser, dotenv, multer, qrcode, sharp (redimensionar a arte), nodemailer (ranking por e-mail, SMTP opcional). Testes com `node:test`. Fora do app, `integracoes/` tem o script opcional da máquina de karaokê (Python + python-broadlink, SPEC 10.5).
 
 ## Ordem de construção
 1. `db.js` com o schema da seção 6.
@@ -17,7 +17,7 @@ Node 20, Express, better-sqlite3, HTML/CSS/JS puro em `public/` (sem bundler nem
 - Nada de dados de uma festa específica no código: nomes, datas, cores e textos vêm de `festa`.
 - No máximo um pedido `na_vez`, e ele nunca muda por recálculo.
 - A parcial da votação nunca sai na API enquanto a votação está aberta.
-- Ações de convidado validam o dono pelo cookie `kid`; ações de admin exigem o cookie `adm`; setup sem PIN exige `X-Setup-Token`.
+- Ações de convidado validam o dono pelo cookie `kid`; ações de admin exigem o cookie `adm`; setup sem PIN exige `X-Setup-Token`; rotas da máquina exigem `X-Maquina-Token`.
 - Nunca importar a primeira linha do PDF (contato da locadora) nem commitar arquivos de `data/`.
 - Textos da interface em português do Brasil.
 

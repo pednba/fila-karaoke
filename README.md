@@ -27,7 +27,7 @@ Você aluga (ou tem) um aparelho de karaokê que toca músicas por código. Os c
 git clone https://github.com/pednba/fila-karaoke.git
 cd fila-karaoke
 npm install
-cp .env.example .env      # preencha PUBLIC_URL, SETUP_TOKEN e COOKIE_SECRET (SMTP_* é opcional: ranking por e-mail)
+cp .env.example .env      # preencha PUBLIC_URL, SETUP_TOKEN e COOKIE_SECRET (opcionais: SMTP_* para o ranking por e-mail e MAQUINA_TOKEN para a máquina de karaokê, ver integracoes/README.md)
 npm start                 # ou: pm2 start server.js --name karaoke
 ```
 

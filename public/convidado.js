@@ -2,12 +2,18 @@
 import { $, esc, api, vigiar, avisar, icone, filete, definirIcone, plural, dividirTitulo, MICROFONE, LUPA } from './comum.js';
 
 const app = $('#app');
+const PASSO_ARTISTAS = 80;
 const s = {
   festa: null,
   estado: null,
   tela: null, // rascunho | entrada | festa | encerrada
   aba: 'fila',
-  busca: { q: '', filtro: '', musicas: [], total: 0, carregando: false },
+  busca: {
+    q: '', filtro: '', modo: 'musicas', artista: null, // artista: { nome, chave }
+    musicas: [], total: 0, carregando: false, geracao: 0,
+    artistas: {}, mostrarArtistas: PASSO_ARTISTAS, // artistas: cache por filtro
+    sugestao: null, sugestaoChave: null,
+  },
   ranking: { tipo: null, lista: [], versao: null, pessoasVazio: false },
 };
 let poll;
@@ -138,12 +144,17 @@ function montarFesta() {
       <div class="pilha" data-aba="busca">
         <label for="busca" class="rotulo" style="font-size: 13px;">Buscar música</label>
         <div class="busca">${LUPA}<input id="busca" type="search" enterkeyhint="search" autocomplete="off" placeholder="Música, artista ou trecho da letra"></div>
+        <div class="pilulas" id="modos">
+          <button type="button" class="pilula" data-modo="musicas">Músicas</button>
+          <button type="button" class="pilula" data-modo="artistas">Artistas</button>
+        </div>
         <div class="pilulas" id="filtros">
           <button type="button" class="pilula" data-filtro="">Todas</button>
           <button type="button" class="pilula" data-filtro="nacionais">Nacionais</button>
           <button type="button" class="pilula" data-filtro="internacionais">Internacionais</button>
         </div>
         <div id="resultado-busca" class="pilha"></div>
+        <div id="mais-busca" class="sec centro" style="padding: 12px;"></div>
       </div>
       <div class="pilha" data-aba="meus"></div>
       <div class="pilha" data-aba="ranking" style="gap: 10px;"></div>
@@ -155,14 +166,28 @@ function montarFesta() {
   $('#busca').oninput = (ev) => {
     clearTimeout(espera);
     s.busca.q = ev.target.value;
+    if (s.busca.modo === 'artistas') {
+      s.busca.mostrarArtistas = PASSO_ARTISTAS;
+      return renderBusca();
+    }
     espera = setTimeout(buscar, 250);
+  };
+  $('#modos').onclick = (ev) => {
+    const b = ev.target.closest('[data-modo]');
+    if (!b || b.dataset.modo === s.busca.modo) return;
+    trocarModo(b.dataset.modo);
   };
   $('#filtros').onclick = (ev) => {
     const b = ev.target.closest('[data-filtro]');
     if (!b) return;
     s.busca.filtro = b.dataset.filtro;
-    buscar();
+    if (s.busca.modo === 'artistas') carregarArtistas();
+    else buscar();
   };
+  // Rolagem infinita: quando o fim da lista aparece, carrega a próxima página.
+  new IntersectionObserver((vistos) => {
+    if (vistos.some((v) => v.isIntersecting)) carregarMais();
+  }, { rootMargin: '400px' }).observe($('#mais-busca'));
   $('#menu').onclick = (ev) => {
     const b = ev.target.closest('[data-ir]');
     if (b) irPara(b.dataset.ir);
@@ -271,32 +296,116 @@ function cartaoVoto(v) {
 
 // ---------- Catálogo ----------
 
-async function buscar() {
-  const { q, filtro } = s.busca;
-  s.busca.carregando = true;
+// mais = true pede a página seguinte da mesma busca (rolagem infinita).
+async function buscar({ mais = false } = {}) {
+  const b = s.busca;
+  if (mais && (b.carregando || b.musicas.length >= b.total)) return;
+  const geracao = mais ? b.geracao : ++b.geracao;
+  const params = new URLSearchParams({ q: b.q.trim(), filtro: b.filtro, offset: mais ? b.musicas.length : 0 });
+  if (b.artista) params.set('artista', b.artista.chave);
+  b.carregando = true;
   try {
-    const r = await api('GET', `/api/musicas?q=${encodeURIComponent(q.trim())}&filtro=${filtro}`);
-    if (q !== s.busca.q || filtro !== s.busca.filtro) return; // resposta atrasada
-    s.busca.musicas = r.musicas;
-    s.busca.total = r.total;
+    const r = await api('GET', `/api/musicas?${params}`);
+    if (geracao !== b.geracao) return; // resposta atrasada
+    const vistas = new Set(mais ? b.musicas.map((m) => m.cod) : []);
+    b.musicas = [...(mais ? b.musicas : []), ...r.musicas.filter((m) => !vistas.has(m.cod))];
+    b.total = r.total;
   } catch (e) {
-    avisar(e.message);
+    if (geracao === b.geracao) avisar(e.message);
   } finally {
-    s.busca.carregando = false;
+    if (geracao === b.geracao) b.carregando = false;
   }
-  if (s.aba === 'busca') renderBusca();
+  if (geracao === b.geracao && s.aba === 'busca' && b.modo === 'musicas') {
+    renderBusca();
+    if (fimVisivel()) carregarMais();
+  }
 }
 
-function renderBusca() {
-  for (const b of app.querySelectorAll('[data-filtro]')) b.setAttribute('aria-pressed', String(b.dataset.filtro === s.busca.filtro));
-  const { maximo, ativos } = s.estado.limite;
-  const cheio = ativos >= maximo;
-  const { musicas, total } = s.busca;
-  const resumo = total === 0 ? 'Nenhuma música encontrada' : total > musicas.length ? `Mostrando ${musicas.length} de ${total}` : plural(total, 'música', 'músicas');
-  $('#resultado-busca').innerHTML = `
-    ${cheio ? `<p class="aviso">Você já tem ${plural(maximo, 'música', 'músicas')} na fila. Cancele uma em Meus pedidos para pedir outra.</p>` : ''}
-    <span class="sec">${resumo}</span>
-    ${musicas.map((m) => `
+async function carregarArtistas() {
+  const b = s.busca;
+  const filtro = b.filtro;
+  b.mostrarArtistas = PASSO_ARTISTAS;
+  if (!b.artistas[filtro]) {
+    renderBusca();
+    try {
+      b.artistas[filtro] = (await api('GET', `/api/artistas?filtro=${filtro}`)).artistas;
+    } catch (e) {
+      return avisar(e.message);
+    }
+  }
+  if (s.aba === 'busca' && b.modo === 'artistas' && b.filtro === filtro) renderBusca();
+}
+
+function carregarMais() {
+  if (s.aba !== 'busca') return;
+  const b = s.busca;
+  if (b.modo === 'musicas') return buscar({ mais: true });
+  const lista = artistasFiltrados();
+  if (b.mostrarArtistas >= lista.length) return;
+  b.mostrarArtistas += PASSO_ARTISTAS;
+  renderBusca();
+  if (fimVisivel()) requestAnimationFrame(carregarMais);
+}
+
+function fimVisivel() {
+  const fim = $('#mais-busca');
+  return fim && !fim.hidden && fim.getBoundingClientRect().top < innerHeight + 400;
+}
+
+function trocarModo(modo, artista = null) {
+  const b = s.busca;
+  b.modo = modo;
+  b.artista = artista;
+  b.q = '';
+  $('#busca').value = '';
+  $('#busca').placeholder = modo === 'artistas' ? 'Nome do artista' : 'Música, artista ou trecho da letra';
+  window.scrollTo(0, 0);
+  if (modo === 'artistas') carregarArtistas();
+  else {
+    b.musicas = [];
+    b.total = 0;
+    renderBusca();
+    buscar();
+  }
+}
+
+// Mesma ideia da normalização do servidor, só o suficiente para filtrar a lista de artistas.
+function simplificar(texto) {
+  return texto.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ').trim().replace(/(\p{L})\1+/gu, '$1');
+}
+
+function artistasFiltrados() {
+  const lista = s.busca.artistas[s.busca.filtro] ?? [];
+  const termo = simplificar(s.busca.q);
+  if (!termo) return lista;
+  return lista.filter((a) => a.chave.includes(termo) || simplificar(a.nome).includes(termo));
+}
+
+// "Você pode gostar" (SPEC 5.6): busca de novo quando os pedidos da pessoa mudam.
+async function atualizarSugestao() {
+  const b = s.busca;
+  const meus = s.estado.meus_pedidos;
+  const chave = meus.map((p) => `${p.id}:${p.status}`).join(',');
+  if (chave === b.sugestaoChave) return;
+  b.sugestaoChave = chave;
+  if (!meus.some((p) => p.status === 'cantou')) {
+    b.sugestao = null;
+    return;
+  }
+  try {
+    const { sugestao } = await api('GET', '/api/sugestao');
+    if (b.sugestaoChave !== chave) return;
+    b.sugestao = sugestao;
+    if (s.aba === 'busca') renderBusca();
+  } catch {
+    // Sugestão é extra: se falhar, o catálogo segue normal.
+  }
+}
+
+function itemMusica(m, { naFila, cheio }) {
+  const pedida = naFila.has(m.cod);
+  return `
       <div class="item">
         <div class="cresce pilha" style="gap: 2px;">
           <span class="titulo-item">${esc(m.titulo)}</span>
@@ -304,8 +413,67 @@ function renderBusca() {
           ${m.inicio ? `<span class="letra cortar">“${esc(m.inicio)}”</span>` : ''}
         </div>
         <button type="button" class="btn btn-pedir" data-acao="pedir" data-cod="${esc(m.cod)}" data-titulo="${esc(m.titulo)}"
-          ${m.na_fila || cheio ? 'disabled' : ''} aria-label="${m.na_fila ? 'Já pedida' : 'Pedir'}: ${esc(m.titulo)}">${m.na_fila ? 'Na fila' : 'Pedir'}</button>
-      </div>`).join('')}`;
+          ${pedida || cheio ? 'disabled' : ''} aria-label="${pedida ? 'Já pedida' : 'Pedir'}: ${esc(m.titulo)}">${pedida ? 'Na fila' : 'Pedir'}</button>
+      </div>`;
+}
+
+function renderBusca() {
+  const b = s.busca;
+  for (const el of app.querySelectorAll('[data-filtro]')) el.setAttribute('aria-pressed', String(el.dataset.filtro === b.filtro));
+  for (const el of app.querySelectorAll('[data-modo]')) el.setAttribute('aria-pressed', String(el.dataset.modo === b.modo));
+  atualizarSugestao();
+  if (b.modo === 'artistas') return renderArtistas();
+
+  const { maximo, ativos } = s.estado.limite;
+  const cheio = ativos >= maximo;
+  const naFila = new Set(s.estado.meus_pedidos.filter((p) => p.status !== 'cantou').map((p) => p.cod));
+  const { musicas, total } = b;
+  const resumo = b.carregando && !musicas.length ? 'Buscando…' : total === 0 ? 'Nenhuma música encontrada' : plural(total, 'música', 'músicas');
+  const sugestao = !b.q.trim() && !b.artista && b.sugestao;
+  $('#resultado-busca').innerHTML = `
+    ${cheio ? `<p class="aviso">Você já tem ${plural(maximo, 'música', 'músicas')} na fila. Cancele uma em Meus pedidos para pedir outra.</p>` : ''}
+    ${b.artista ? `
+      <div class="pilulas"><button type="button" class="pilula" aria-pressed="true" data-acao="sem-artista" aria-label="Tirar o filtro de artista">Artista: ${esc(b.artista.nome)} ✕</button></div>` : ''}
+    ${sugestao ? `
+      <div class="pilha" style="gap: 6px;">
+        <span class="rotulo" style="font-size: 13px;">Você pode gostar</span>
+        <span class="sec" style="font-size: 13px;">Porque você cantou ${esc(sugestao.artista)}</span>
+        ${itemMusica(sugestao.musica, { naFila, cheio })}
+      </div>` : ''}
+    <span class="sec">${resumo}</span>
+    ${musicas.map((m) => itemMusica(m, { naFila, cheio })).join('')}`;
+  const fim = $('#mais-busca');
+  fim.hidden = musicas.length >= total;
+  fim.textContent = b.carregando ? 'Carregando mais…' : '';
+}
+
+function renderArtistas() {
+  const b = s.busca;
+  const fim = $('#mais-busca');
+  const carregada = b.artistas[b.filtro];
+  if (!carregada) {
+    $('#resultado-busca').innerHTML = '<span class="sec">Carregando artistas…</span>';
+    fim.hidden = true;
+    return;
+  }
+  const lista = artistasFiltrados();
+  let letra = null;
+  const linhas = lista.slice(0, b.mostrarArtistas).map((a, i) => {
+    const inicial = simplificar(a.nome).charAt(0).toUpperCase();
+    const grupo = /[A-Z]/.test(inicial) ? inicial : '#';
+    const cabeca = grupo !== letra ? `<h3 class="rotulo" style="font-size: 13px; margin-top: 8px;">${grupo}</h3>` : '';
+    letra = grupo;
+    return `${cabeca}
+      <button type="button" class="item" style="text-align: left; width: 100%;" data-acao="artista" data-i="${i}">
+        <span class="cresce titulo-item">${esc(a.nome)}</span>
+        <span class="sec" style="font-size: 13px;">${plural(a.total, 'música', 'músicas')}</span>
+      </button>`;
+  });
+  $('#resultado-busca').innerHTML = `
+    <span class="sec">${lista.length ? plural(lista.length, 'artista', 'artistas') : 'Nenhum artista encontrado'}</span>
+    ${linhas.join('')}`;
+  fim.hidden = b.mostrarArtistas >= lista.length;
+  fim.textContent = '';
 }
 
 // ---------- Pedidos ----------
@@ -454,22 +622,24 @@ async function aoClicar(ev) {
       const { posicao_estimada: pos } = await api('POST', '/api/pedidos', { musica_cod: b.dataset.cod });
       const min = s.festa.regras.minutos_por_musica;
       avisar(`${b.dataset.titulo} entrou na fila. ${pos === 0 ? 'É a sua vez!' : pos === 1 ? 'Você é o próximo!' : `Posição estimada: ${pos}º (~${pos * min} min).`}`);
-      const musica = s.busca.musicas.find((m) => m.cod === b.dataset.cod);
-      if (musica) musica.na_fila = true;
     } else if (acao === 'cancelar') {
       b.disabled = true;
       await api('DELETE', `/api/pedidos/${id}`);
       avisar('Pedido cancelado.');
-      buscar();
     } else if (acao === 'cantou') {
       b.disabled = true;
       await api('POST', `/api/pedidos/${id}/cantou`);
       avisar(votacaoLigada() ? 'Arrasou! A galera está votando na sua nota.' : 'Arrasou! A fila andou.');
-      buscar();
     } else if (acao === 'votar') {
       const nota = Number(b.dataset.nota);
       await api('PUT', '/api/votos', { pedido_id: Number(id), nota });
       avisar(`Voto registrado: ${nota}.`);
+    } else if (acao === 'artista') {
+      const artista = artistasFiltrados()[Number(b.dataset.i)];
+      if (artista) trocarModo('musicas', { nome: artista.nome, chave: artista.chave });
+      return;
+    } else if (acao === 'sem-artista') {
+      return trocarModo('musicas');
     } else if (acao === 'tipo-ranking') {
       s.ranking.tipo = b.dataset.tipo;
       s.ranking.versao = null;

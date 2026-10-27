@@ -5,6 +5,7 @@ import { normalizarBusca } from '../texto.js';
 import { prepararMusicas } from '../importadores/index.js';
 import { gravarCatalogo } from '../catalogo.js';
 import { buscarMusicas } from '../rotas/publico.js';
+import { listarArtistas, sugerir } from '../artistas.js';
 
 test('normalizarBusca iguala grafias do mesmo nome', () => {
   const iguais = [
@@ -58,4 +59,77 @@ test('migração recalcula a coluna busca de um catálogo antigo', () => {
   db.pragma('user_version = 2');
   migrar(db);
   assert.equal(db.prepare('SELECT busca FROM musicas').pluck().get(), 'pai fabio junior 1');
+});
+
+test('busca pagina com offset e recusa offset inválido', () => {
+  const db = bancoCom(Array.from({ length: 45 }, (_, i) => ({ cod: String(100 + i), titulo: `Canção ${String(i).padStart(2, '0')}`, artista: 'Banda' })));
+  const pagina = (offset) => buscarMusicas(db, { offset });
+  assert.equal(pagina(0).musicas.length, 20);
+  assert.equal(pagina(0).total, 45);
+  assert.equal(pagina(40).musicas.length, 5);
+  const todas = [0, 20, 40].flatMap((o) => pagina(o).musicas.map((m) => m.cod));
+  assert.equal(new Set(todas).size, 45);
+  for (const offset of [-1, 1.5, NaN]) assert.throws(() => buscarMusicas(db, { offset }), { status: 422 });
+});
+
+test('filtro por artista pega parcerias e grafias, sem confundir nomes parecidos', () => {
+  const db = bancoCom([
+    { cod: '1', titulo: 'A', artista: 'Gusttavo Lima' },
+    { cod: '2', titulo: 'B', artista: 'Bruninho e Davi - Gusttavo Lima' },
+    { cod: '3', titulo: 'C', artista: 'Gusttavo Lima - Marília Mendonça' },
+    { cod: '4', titulo: 'D', artista: 'Lima' },
+    { cod: '5', titulo: 'E', artista: 'Sandy e Junior - Gustt...' },
+  ]);
+  const cods = (artista, q = '') => buscarMusicas(db, { artista, q }).musicas.map((m) => m.cod).sort();
+  assert.deepEqual(cods('gustavo lima'), ['1', '2', '3']);
+  assert.deepEqual(cods('Lima'), ['4']);
+  assert.deepEqual(cods('sandy & junior'), ['5']);
+  assert.deepEqual(cods('gusttavo lima', 'b'), ['2']);
+});
+
+test('listarArtistas separa parcerias, ignora nomes cortados e soma grafias', () => {
+  const db = bancoCom([
+    { cod: '1', titulo: 'A', artista: 'Fábio Jr.' },
+    { cod: '2', titulo: 'B', artista: 'Fábio Jr.' },
+    { cod: '3', titulo: 'C', artista: 'Fabio Junior - Zezé' },
+    { cod: '4', titulo: 'D', artista: 'Sandy e Junior - Chitã...' },
+    { cod: '5', titulo: 'E', artista: 'ABBA', idioma: 'ING' },
+  ]);
+  assert.deepEqual(listarArtistas(db), [
+    { nome: 'ABBA', chave: 'aba', total: 1 },
+    { nome: 'Fábio Jr.', chave: 'fabio junior', total: 3 },
+    { nome: 'Sandy e Junior', chave: 'sandy junior', total: 1 },
+    { nome: 'Zezé', chave: 'zeze', total: 1 },
+  ]);
+  assert.deepEqual(listarArtistas(db, { filtro: 'internacionais' }).map((a) => a.nome), ['ABBA']);
+});
+
+test('sugerir: nada antes de cantar; depois, outra do mesmo artista que ela não pediu', () => {
+  const db = bancoCom([
+    { cod: '1', titulo: 'A', artista: 'Fábio Jr.' },
+    { cod: '2', titulo: 'B', artista: 'Fabio Junior' },
+    { cod: '3', titulo: 'C', artista: 'Fábio Jr. - Zezé' },
+    { cod: '4', titulo: 'D', artista: 'Roberto Carlos' },
+    { cod: '5', titulo: 'E', artista: 'Roberto Carlos' },
+  ]);
+  db.prepare("INSERT INTO pessoas (id, nome, nome_norm) VALUES ('p1', 'Ana', 'ana')").run();
+  const pedir = db.prepare("INSERT INTO pedidos (pessoa_id, musica_cod, status, t_fila, finalizado_em) VALUES ('p1', ?, ?, 0, ?)");
+  assert.equal(sugerir(db, 'p1'), null);
+
+  pedir.run('1', 'pendente', null);
+  assert.equal(sugerir(db, 'p1'), null);
+  db.prepare("UPDATE pedidos SET status = 'cantou', finalizado_em = '2026-01-01 20:00' WHERE musica_cod = '1'").run();
+  const s = sugerir(db, 'p1');
+  assert.equal(s.artista, 'Fábio Jr.');
+  assert.ok(['2', '3'].includes(s.musica.cod));
+  assert.deepEqual(sugerir(db, 'p1'), s, 'estável entre atualizações');
+
+  pedir.run('2', 'pendente', null);
+  pedir.run('3', 'cancelado', null);
+  assert.equal(sugerir(db, 'p1'), null, 'já pediu todas do artista');
+
+  pedir.run('4', 'cantou', '2026-01-01 21:00');
+  const outra = sugerir(db, 'p1');
+  assert.equal(outra.musica.cod, '5');
+  assert.equal(outra.artista, 'Roberto Carlos');
 });

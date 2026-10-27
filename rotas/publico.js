@@ -6,6 +6,7 @@ import { escrever, lerVersao } from '../db.js';
 import { lerFesta } from '../festa.js';
 import { normalizar, normalizarBusca } from '../texto.js';
 import { formatarNota } from '../votos.js';
+import { listarArtistas, sugerir } from '../artistas.js';
 import {
   pedidoNaVez, filaOrdenada, pedir, cancelar, cantou, votar, votacoesAbertas, ranking,
 } from '../operacao.js';
@@ -49,7 +50,7 @@ export function pedidoPublico(p, pessoa_id) {
 // Escapa % e _ para o LIKE.
 const paraLike = (s) => `%${s.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 
-export function buscarMusicas(db, { q = '', filtro = '' } = {}) {
+export function buscarMusicas(db, { q = '', filtro = '', artista = '', offset = 0 } = {}) {
   const termo = normalizarBusca(q);
   const condicoes = ['fora_do_catalogo = 0'];
   const params = {};
@@ -57,6 +58,12 @@ export function buscarMusicas(db, { q = '', filtro = '' } = {}) {
     condicoes.push("busca LIKE @like ESCAPE '\\'");
     params.like = paraLike(termo);
   }
+  const chave = normalizarBusca(artista);
+  if (chave) {
+    condicoes.push("artistas_busca(artista) LIKE @artista ESCAPE '\\'");
+    params.artista = `%|${chave.replace(/[\\%_]/g, (c) => `\\${c}`)}|%`;
+  }
+  if (!Number.isInteger(offset) || offset < 0) throw erro(422, 'offset_invalido', 'Posição da lista inválida.');
   if (filtro === 'nacionais') condicoes.push("idioma = 'BRA'");
   else if (filtro === 'internacionais') condicoes.push("idioma <> 'BRA'");
   else if (filtro) throw erro(422, 'filtro_invalido', 'Filtro inválido.');
@@ -70,7 +77,7 @@ export function buscarMusicas(db, { q = '', filtro = '' } = {}) {
     : '';
   const musicas = db.prepare(`
     SELECT cod, titulo, artista, inicio, idioma FROM musicas WHERE ${onde}
-     ORDER BY idioma = 'JAP', ${relevancia} titulo, artista, cod LIMIT ${LIMITE_BUSCA}`).all(params);
+     ORDER BY idioma = 'JAP', ${relevancia} titulo, artista, cod LIMIT ${LIMITE_BUSCA} OFFSET ${offset}`).all(params);
   const total = db.prepare(`SELECT COUNT(*) FROM musicas WHERE ${onde}`).pluck().get(params);
   return { musicas, total };
 }
@@ -114,11 +121,27 @@ export function rotasPublicas({ db, config, auth }) {
 
   r.get('/musicas', (req, res) => {
     const pessoa = pessoaDoCookie(db, req);
-    const { musicas, total } = buscarMusicas(db, { q: String(req.query.q ?? ''), filtro: String(req.query.filtro ?? '') });
+    const offset = req.query.offset === undefined ? 0 : Number(req.query.offset);
+    const { musicas, total } = buscarMusicas(db, {
+      q: String(req.query.q ?? ''),
+      filtro: String(req.query.filtro ?? ''),
+      artista: String(req.query.artista ?? ''),
+      offset,
+    });
     const naFila = new Set(pessoa
       ? db.prepare("SELECT musica_cod FROM pedidos WHERE pessoa_id = ? AND status IN ('pendente', 'na_vez')").pluck().all(pessoa.id)
       : []);
-    res.json({ musicas: musicas.map((m) => ({ ...m, na_fila: naFila.has(m.cod) })), total });
+    res.json({ musicas: musicas.map((m) => ({ ...m, na_fila: naFila.has(m.cod) })), total, offset });
+  });
+
+  r.get('/artistas', (req, res) => {
+    const filtro = String(req.query.filtro ?? '');
+    if (!['', 'nacionais', 'internacionais'].includes(filtro)) throw erro(422, 'filtro_invalido', 'Filtro inválido.');
+    res.json({ artistas: listarArtistas(db, { filtro }) });
+  });
+
+  r.get('/sugestao', comPessoa, (req, res) => {
+    res.json({ sugestao: sugerir(db, req.pessoa.id) });
   });
 
   r.post('/pedidos', comPessoa, (req, res) => {

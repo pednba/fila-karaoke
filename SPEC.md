@@ -147,7 +147,13 @@ Normalização da busca, aplicada igual ao catálogo e ao termo digitado (não v
 - pontuação vira espaço; apóstrofo some sem espaço (`Destiny's` → `destinys`);
 - conectivos soltos somem: `e`, `&`, `and`, `y`, `n` e as formas `'n'` (`Sandy & Junior` = `Sandy e Júnior`; `Rock'n'Roll` = `Rock and Roll`);
 - abreviações: `jr` → `junior`; `ft`, `featuring` → `feat` (`Fábio Jr.` = `Fabio Júnior`);
-- letras repetidas em sequência viram uma (`Barretto` = `Barreto`, `Mello` = `Melo`). Ordenação: casamento no título, depois artista, depois letra; idioma `JAP` por último. Filtro "Nacionais" = `BRA`; "Internacionais" = o resto. Limite de 20 resultados + total.
+- letras repetidas em sequência viram uma (`Barretto` = `Barreto`, `Mello` = `Melo`). Ordenação: casamento no título, depois artista, depois letra; idioma `JAP` por último. Filtro "Nacionais" = `BRA`; "Internacionais" = o resto. Páginas de 20 resultados + total, com `offset` (inteiro ≥ 0; outro valor dá `422 offset_invalido`); o convidado rola a lista e a próxima página carrega sozinha (rolagem infinita). Com a busca vazia, a lista é o catálogo inteiro.
+
+### 5.5 Navegação por artista
+O PDF não traz gênero musical, então quem não sabe o que buscar navega por artista. O campo artista é dividido em participantes por ` - ` (`Bruninho e Davi - Gusttavo Lima` conta para os dois); participante cortado pelo PDF (termina em `...` ou `…`) é ignorado. Grafias com a mesma normalização da busca (5.4) são o mesmo artista, exibido com a grafia mais frequente. Lista A–Z com o total de músicas de cada um, respeitando o filtro Nacionais/Internacionais e filtrável pelo campo de busca. Tocar num artista mostra as músicas dele (filtro `artista`, combinável com a busca e com o filtro de idioma), com um chip "Artista: X ✕" para sair.
+
+### 5.6 Você pode gostar
+Quem já cantou alguma música vê **um** espaço reservado no topo do catálogo (só com a busca vazia e sem filtro de artista): uma música de um artista que a pessoa já cantou e que ela nunca pediu (em nenhum status), com o texto "Porque você cantou X". Com vários artistas, alterna entre eles a cada pedido novo da pessoa; a escolha não muda entre atualizações da tela se os pedidos dela não mudaram. Sem candidata, o espaço não aparece.
 
 ## 6. Modelo de dados
 
@@ -285,7 +291,9 @@ JSON. Erros: `{ "erro": "codigo", "mensagem": "texto para a tela" }`.
 | `GET /api/festa/arte` | | a imagem |
 | `POST /api/pessoas` | `{nome}` | `201` + cookie; `409 nome_em_uso`; `403 festa_fechada` |
 | `GET /api/estado` | | `{versao, me, atual, proximos[10], total_fila, meus_pedidos[], votacoes[], limite}` |
-| `GET /api/musicas?q=&filtro=` | | até 20 + `total` |
+| `GET /api/musicas?q=&filtro=&artista=&offset=` | | página de até 20 + `total` + `offset` (5.4, 5.5) |
+| `GET /api/artistas?filtro=` | | `{artistas: [{nome, chave, total}]}` em ordem A–Z (5.5) |
+| `GET /api/sugestao` | | `{sugestao: {musica, artista} \| null}` para o convidado do cookie (5.6) |
 | `POST /api/pedidos` | `{musica_cod}` | `201 {pedido, posicao_estimada}`; `limite_atingido`, `ja_pedida`, `musica_inexistente` |
 | `DELETE /api/pedidos/:id` | | `204` |
 | `POST /api/pedidos/:id/cantou` | | `200` |
@@ -351,7 +359,7 @@ Referência visual: `docs/design/` (formato do protótipo; ver o LEIA-ME de lá)
 - **Cabeçalho:** título curto + nome do convidado.
 - **Menu inferior:** Fila · Catálogo · Pedidos (n) · Ranking.
 - **Fila:** "Agora no palco" (título, artista, código grande, cantor); "Cantou?" quando é a vez do usuário; cartões de voto (atual e anterior); "Próximos 10" com o usuário destacado.
-- **Catálogo:** busca, filtros, "Pedir"/"Na fila", aviso de limite.
+- **Catálogo:** busca, Músicas / Artistas, filtros, rolagem infinita, "Você pode gostar", "Pedir"/"Na fila", aviso de limite.
 - **Pedidos:** posição, espera estimada, cancelar, "Já cantei".
 - **Ranking:** Pessoas / Performances.
 - **Festa em preparação** (rascunho) e **Festa encerrada** (ranking final + agradecimento).

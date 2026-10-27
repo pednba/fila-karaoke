@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import Database from 'better-sqlite3';
 import { normalizar, normalizarBusca } from './texto.js';
+import { chavesArtista } from './artistas.js';
 
 // Cada item é uma migração; o índice + 1 é o PRAGMA user_version após aplicá-la.
 // Nunca editar uma migração já publicada: acrescentar uma nova no fim.
@@ -100,6 +101,7 @@ export function abrirBanco(arquivo = path.join(process.env.DATA_DIR || './data',
   db.pragma('foreign_keys = ON');
   db.function('normalizar', { deterministic: true }, normalizar);
   db.function('normalizar_busca', { deterministic: true }, normalizarBusca); // ordenação da busca (SPEC 5.4)
+  db.function('artistas_busca', { deterministic: true }, chavesArtista); // filtro por artista (SPEC 5.5)
   migrar(db);
   return db;
 }

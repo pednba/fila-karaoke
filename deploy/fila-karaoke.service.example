@@ -1,0 +1,21 @@
+# Alternativa ao pm2: serviço systemd que reinicia sozinho e sobe com a máquina.
+# Troque usuário e caminho, copie para /etc/systemd/system/fila-karaoke.service e rode:
+#   sudo systemctl daemon-reload && sudo systemctl enable --now fila-karaoke
+#   journalctl -u fila-karaoke -f    # logs
+[Unit]
+Description=Fila Karaokê
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/fila-karaoke
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=3
+Environment=NODE_ENV=production
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

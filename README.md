@@ -19,7 +19,7 @@ Você aluga (ou tem) um aparelho de karaokê que toca músicas por código. Os c
 - Um servidor com Node 20+ (testado em EC2 com Ubuntu 22.04/24.04), acessível pela internet.
 - `poppler-utils` (para importar PDF): `sudo apt install poppler-utils`.
 - Um domínio ou subdomínio apontando para o servidor (HTTPS é necessário para o cookie seguro).
-- Caddy (recomendado) ou outro proxy com TLS.
+- Caddy (recomendado) ou outro proxy com TLS. Se a máquina já usa nginx nas portas 80/443, veja abaixo.
 
 ## Instalação
 
@@ -41,6 +41,14 @@ karaoke.seudominio.com.br {
 ```
 
 Para gerar segredos: `openssl rand -hex 24`.
+
+O app escuta só em `127.0.0.1` (variável `HOST`), então o proxy é o único caminho até ele. Para testar de outro aparelho na rede local, use `HOST=0.0.0.0`.
+
+### Máquina que já usa nginx
+
+Use `deploy/nginx.conf.example` no lugar do `Caddyfile` e emita o certificado com `sudo certbot --nginx -d <seu domínio>`. O `client_max_body_size` do modelo libera o upload do catálogo em PDF; sem ele, o nginx recusa arquivos acima de 1 MB.
+
+Para manter o app no ar sem pm2, há um serviço systemd em `deploy/fila-karaoke.service.example`.
 
 ## Primeira festa
 

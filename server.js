@@ -4,6 +4,8 @@ import { criarApp } from './app.js';
 
 const config = {
   port: Number(process.env.PORT || 3000),
+  // Atrás do proxy, só a própria máquina fala com o app. HOST=0.0.0.0 para testar na rede local.
+  host: process.env.HOST || '127.0.0.1',
   publicUrl: process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`,
   setupToken: process.env.SETUP_TOKEN,
   cookieSecret: process.env.COOKIE_SECRET,
@@ -21,4 +23,4 @@ for (const [nome, valor] of [['SETUP_TOKEN', config.setupToken], ['COOKIE_SECRET
 
 const db = abrirBanco(`${config.dataDir}/karaoke.db`);
 const app = criarApp({ db, config });
-app.listen(config.port, () => console.log(`Fila Karaokê em ${config.publicUrl} (porta ${config.port})`));
+app.listen(config.port, config.host, () => console.log(`Fila Karaokê em ${config.publicUrl} (${config.host}:${config.port})`));

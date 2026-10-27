@@ -3,7 +3,7 @@
 App web genérico de fila de karaokê para festas. A fonte da verdade é `SPEC.md`: leia inteira antes de escrever código e não invente regra que não esteja lá. Se algo estiver ambíguo, pergunte.
 
 ## Stack fixa
-Node 20, Express, better-sqlite3, HTML/CSS/JS puro em `public/` (sem bundler nem framework de front), Caddy na frente, pm2. Dependências permitidas: express, better-sqlite3, cookie-parser, dotenv, multer, qrcode, sharp (redimensionar a arte). Testes com `node:test`.
+Node 20, Express, better-sqlite3, HTML/CSS/JS puro em `public/` (sem bundler nem framework de front), Caddy na frente (ou nginx, quando a máquina já usa as portas 80/443; ver `deploy/`), pm2 ou systemd. Dependências permitidas: express, better-sqlite3, cookie-parser, dotenv, multer, qrcode, sharp (redimensionar a arte). Testes com `node:test`.
 
 ## Ordem de construção
 1. `db.js` com o schema da seção 6.

@@ -1,6 +1,6 @@
 // Escolhe o importador pelo tipo de arquivo e monta a prévia do passo 4 do setup (SPEC 4.2).
 import fs from 'node:fs';
-import { normalizar } from '../texto.js';
+import { normalizarBusca } from '../texto.js';
 import { importarTexto, extrairTexto } from './pdf-lista-aparelho.js';
 import { importarCsv } from './csv.js';
 
@@ -24,7 +24,7 @@ export function prepararMusicas(musicas) {
   for (const m of musicas) {
     if (vistos.has(m.cod)) continue;
     vistos.add(m.cod);
-    saida.push({ ...m, busca: normalizar([m.titulo, m.artista, m.inicio, m.cod].join(' ')) });
+    saida.push({ ...m, busca: normalizarBusca([m.titulo, m.artista, m.inicio, m.cod].join(' ')) });
   }
   return saida;
 }

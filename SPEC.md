@@ -119,7 +119,7 @@ fila-karaoke/
 ## 5. Catálogo
 
 ### 5.1 Tabela
-Ver `musicas` na seção 6. A coluna `busca` guarda título + artista + início da letra + código, em minúsculas e sem acento.
+Ver `musicas` na seção 6. A coluna `busca` guarda título + artista + início da letra + código, com a normalização da busca (5.4).
 
 ### 5.2 Importador PDF "lista de aparelho"
 Formato comum em listas de aparelhos de karaokê alugados: PDF com camada de texto (não escaneado), colunas `Intérprete · Cod · Título · Início da letra · Idioma`, cabeçalho repetido em cada página e linha final "Total de musicas listadas N".
@@ -140,7 +140,14 @@ UTF-8, cabeçalho obrigatório, separador `,` ou `;` (detectar):
 `cod,titulo,artista,idioma,inicio` (`inicio` opcional; `idioma` aceita `BRA`, `EUA`, etc. ou vazio, tratado como `BRA`). Exemplo em `data/catalogos/exemplo.csv`.
 
 ### 5.4 Busca
-`WHERE busca LIKE '%' || ? || '%'` com o termo normalizado (até 20 mil linhas, sem necessidade de FTS). Ordenação: casamento no título, depois artista, depois letra; idioma `JAP` por último. Filtro "Nacionais" = `BRA`; "Internacionais" = o resto. Limite de 20 resultados + total.
+`WHERE busca LIKE '%' || ? || '%'` com o termo normalizado (até 20 mil linhas, sem necessidade de FTS).
+
+Normalização da busca, aplicada igual ao catálogo e ao termo digitado (não vale para nomes de convidados):
+- minúsculas e sem acento;
+- pontuação vira espaço; apóstrofo some sem espaço (`Destiny's` → `destinys`);
+- conectivos soltos somem: `e`, `&`, `and`, `y`, `n` e as formas `'n'` (`Sandy & Junior` = `Sandy e Júnior`; `Rock'n'Roll` = `Rock and Roll`);
+- abreviações: `jr` → `junior`; `ft`, `featuring` → `feat` (`Fábio Jr.` = `Fabio Júnior`);
+- letras repetidas em sequência viram uma (`Barretto` = `Barreto`, `Mello` = `Melo`). Ordenação: casamento no título, depois artista, depois letra; idioma `JAP` por último. Filtro "Nacionais" = `BRA`; "Internacionais" = o resto. Limite de 20 resultados + total.
 
 ## 6. Modelo de dados
 

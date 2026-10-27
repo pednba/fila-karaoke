@@ -7,3 +7,21 @@ export function normalizar(s) {
     .replace(/\s+/g, ' ')
     .trim();
 }
+
+// Normalização só da busca no catálogo (SPEC 5.4): além de normalizar, iguala grafias
+// do mesmo nome. "Fábio Jr." = "Fabio Junior"; "Sandy & Junior" = "Sandy e Júnior";
+// "Rock'n'Roll" = "rock and roll"; "Barretto" = "Barreto".
+const CONECTIVOS = new Set(['e', 'and', 'y', 'n']);
+const SINONIMOS = { jr: 'junior', ft: 'feat', featuring: 'feat' };
+
+export function normalizarBusca(s) {
+  return normalizar(s)
+    .replace(/\s*['’]n['’]?(?![\p{L}\p{N}])\s*/gu, ' e ') // rock'n'roll, rock 'n' roll
+    .replace(/(^|\s)n['’](?=\s|$)/gu, '$1e') // rock n' roll
+    .replace(/['’`´]/g, '') // apóstrofo cola a palavra: Destiny's → destinys
+    .split(/[^\p{L}\p{N}]+/u)
+    .map((p) => SINONIMOS[p] ?? p)
+    .filter((p) => p && !CONECTIVOS.has(p))
+    .map((p) => p.replace(/(\p{L})\1+/gu, '$1'))
+    .join(' ');
+}

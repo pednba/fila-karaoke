@@ -4,7 +4,7 @@ import express from 'express';
 import { erro } from '../erros.js';
 import { escrever, lerVersao } from '../db.js';
 import { lerFesta } from '../festa.js';
-import { normalizar } from '../texto.js';
+import { normalizar, normalizarBusca } from '../texto.js';
 import { formatarNota } from '../votos.js';
 import {
   pedidoNaVez, filaOrdenada, pedir, cancelar, cantou, votar, votacoesAbertas, ranking,
@@ -50,7 +50,7 @@ export function pedidoPublico(p, pessoa_id) {
 const paraLike = (s) => `%${s.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 
 export function buscarMusicas(db, { q = '', filtro = '' } = {}) {
-  const termo = normalizar(q);
+  const termo = normalizarBusca(q);
   const condicoes = ['fora_do_catalogo = 0'];
   const params = {};
   if (termo) {
@@ -64,9 +64,9 @@ export function buscarMusicas(db, { q = '', filtro = '' } = {}) {
 
   // SPEC 5.4: casamento no título, depois artista, depois letra; JAP por último.
   const relevancia = termo
-    ? `CASE WHEN normalizar(titulo) LIKE @like ESCAPE '\\' THEN 0
-            WHEN normalizar(artista) LIKE @like ESCAPE '\\' THEN 1
-            WHEN normalizar(inicio) LIKE @like ESCAPE '\\' THEN 2 ELSE 3 END,`
+    ? `CASE WHEN normalizar_busca(titulo) LIKE @like ESCAPE '\\' THEN 0
+            WHEN normalizar_busca(artista) LIKE @like ESCAPE '\\' THEN 1
+            WHEN normalizar_busca(inicio) LIKE @like ESCAPE '\\' THEN 2 ELSE 3 END,`
     : '';
   const musicas = db.prepare(`
     SELECT cod, titulo, artista, inicio, idioma FROM musicas WHERE ${onde}

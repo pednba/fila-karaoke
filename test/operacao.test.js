@@ -131,7 +131,8 @@ test('busca: sem acento, título antes de artista e letra, JAP por último, filt
 
   assert.deepEqual((await busca('q=amor&filtro=nacionais')).musicas.map((m) => m.cod), ['1002', '1006']);
   assert.deepEqual((await busca('q=amor&filtro=internacionais')).musicas.map((m) => m.cod), ['1004']);
-  assert.equal((await busca('q=100%25')).total, 1); // % é literal
+  // Pontuação vira espaço (SPEC 5.4): "100%" busca "100", e % não vira curinga do LIKE.
+  assert.deepEqual((await busca('q=100%25%20of%20the')).musicas.map((m) => m.cod), ['1003']);
   assert.equal((await busca('q=1005')).musicas[0].titulo, 'TREM DAS ONZE');
   assert.equal((await busca('')).total, 7);
   assert.equal((await caio.chamar('GET', '/api/musicas?filtro=xyz')).dados.erro, 'filtro_invalido');

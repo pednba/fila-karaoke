@@ -7,6 +7,7 @@ import { garantirFesta, lerFesta } from './festa.js';
 import { rotasSetup } from './rotas/setup.js';
 import { rotasFesta } from './rotas/festa.js';
 import { rotasAdmin } from './rotas/admin.js';
+import { rotasPublicas } from './rotas/publico.js';
 
 // config: { dataDir, publicUrl, setupToken, cookieSecret, cookiesSeguros }
 export function criarApp({ db, config }) {
@@ -23,6 +24,7 @@ export function criarApp({ db, config }) {
   app.use('/api/setup', rotasSetup(ctx));
   app.use('/api/festa', rotasFesta(ctx));
   app.use('/api/admin', rotasAdmin(ctx));
+  app.use('/api', rotasPublicas(ctx));
 
   app.use('/api', (req, res) => res.status(404).json({ erro: 'rota_inexistente', mensagem: 'Rota não encontrada.' }));
 

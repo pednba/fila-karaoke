@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import Database from 'better-sqlite3';
+import { normalizar } from './texto.js';
 
 // Cada item é uma migração; o índice + 1 é o PRAGMA user_version após aplicá-la.
 // Nunca editar uma migração já publicada: acrescentar uma nova no fim.
@@ -93,6 +94,7 @@ export function abrirBanco(arquivo = path.join(process.env.DATA_DIR || './data',
   const db = new Database(arquivo);
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
+  db.function('normalizar', { deterministic: true }, normalizar); // ordenação da busca (SPEC 5.4)
   migrar(db);
   return db;
 }

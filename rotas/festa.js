@@ -9,6 +9,24 @@ import { estadoSetup, lerFesta, arquivarFesta } from '../festa.js';
 export function rotasFesta({ db, config, auth }) {
   const r = express.Router();
 
+  // Dados públicos (SPEC 10.2).
+  r.get('/', (req, res) => {
+    const f = lerFesta(db);
+    const { pendentes_por_pessoa, minutos_por_musica, votacao, ranking_pessoas, minimo_votos } = f.regras;
+    res.json({
+      status: f.status,
+      titulo: f.titulo,
+      nome_destaque: f.nome_destaque,
+      subtitulo: f.subtitulo,
+      inicio_em: f.inicio_em,
+      duracao_min: f.duracao_min,
+      local: f.local,
+      arte_url: f.arte_arquivo ? '/api/festa/arte' : null,
+      tema: f.tema,
+      regras: { pendentes_por_pessoa, minutos_por_musica, votacao, ranking_pessoas, minimo_votos },
+    });
+  });
+
   r.get('/arte', (req, res) => {
     const { arte_arquivo } = lerFesta(db);
     const arquivo = arte_arquivo && path.join(config.dataDir, arte_arquivo);

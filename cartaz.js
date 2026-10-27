@@ -1,12 +1,9 @@
 // Cartaz A4 para imprimir: arte, título e QR code (SPEC 4.2, passo 6).
-import { cssDoTema } from './temas.js';
+import { cssDoTema, urlFontes } from './temas.js';
 
 export function escapar(s) {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 }
-
-const FONTES_GOOGLE = (fonte) =>
-  `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fonte).replace(/%20/g, '+')}&family=Montserrat:wght@400;600;700&display=swap`;
 
 export function renderizarCartaz({ festa, link, qrSvg }) {
   const { tema } = festa;
@@ -17,7 +14,7 @@ export function renderizarCartaz({ festa, link, qrSvg }) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cartaz · ${escapar(festa.titulo)}</title>
-<link rel="stylesheet" href="${FONTES_GOOGLE(tema.fonte)}">
+<link rel="stylesheet" href="${urlFontes(tema.fonte)}">
 <style>
 ${cssDoTema(tema)}
 @page { size: A4; margin: 0; }

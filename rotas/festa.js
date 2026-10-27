@@ -12,7 +12,7 @@ export function rotasFesta({ db, config, auth }) {
   // Dados públicos (SPEC 10.2).
   r.get('/', (req, res) => {
     const f = lerFesta(db);
-    const { pendentes_por_pessoa, minutos_por_musica, votacao, ranking_pessoas, minimo_votos } = f.regras;
+    const { pendentes_por_pessoa, minutos_por_musica, votacao, ranking_pessoas, minimo_votos, minimo_performances } = f.regras;
     res.json({
       status: f.status,
       titulo: f.titulo,
@@ -23,7 +23,8 @@ export function rotasFesta({ db, config, auth }) {
       local: f.local,
       arte_url: f.arte_arquivo ? '/api/festa/arte' : null,
       tema: f.tema,
-      regras: { pendentes_por_pessoa, minutos_por_musica, votacao, ranking_pessoas, minimo_votos },
+      regras: { pendentes_por_pessoa, minutos_por_musica, votacao, ranking_pessoas, minimo_votos, minimo_performances },
+      admin_configurado: Boolean(f.admin_pin_hash), // /admin decide entre login e setup
     });
   });
 

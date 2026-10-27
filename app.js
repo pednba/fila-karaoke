@@ -2,8 +2,10 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import multer from 'multer';
+import { fileURLToPath } from 'node:url';
 import { criarAuth } from './auth.js';
 import { garantirFesta, lerFesta } from './festa.js';
+import { cssDoTema, urlFontes } from './temas.js';
 import { rotasSetup } from './rotas/setup.js';
 import { rotasFesta } from './rotas/festa.js';
 import { rotasAdmin } from './rotas/admin.js';
@@ -25,6 +27,13 @@ export function criarApp({ db, config }) {
   app.use('/api/festa', rotasFesta(ctx));
   app.use('/api/admin', rotasAdmin(ctx));
   app.use('/api', rotasPublicas(ctx));
+
+  // Tema da festa como variáveis CSS (SPEC 11), usado por todas as telas.
+  app.get('/tema.css', (req, res) => {
+    const { tema } = lerFesta(db);
+    res.type('text/css').set('Cache-Control', 'no-cache').send(`@import url("${urlFontes(tema.fonte)}");\n${cssDoTema(tema)}\n`);
+  });
+  app.use(express.static(fileURLToPath(new URL('./public', import.meta.url)), { extensions: ['html'] }));
 
   app.use('/api', (req, res) => res.status(404).json({ erro: 'rota_inexistente', mensagem: 'Rota não encontrada.' }));
 

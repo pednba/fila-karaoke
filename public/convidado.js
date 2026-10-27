@@ -1,0 +1,493 @@
+// Tela do convidado (SPEC 12): entrada, Fila, Catálogo, Pedidos, Ranking, preparação e encerrada.
+import { $, esc, api, vigiar, avisar, icone, filete, definirIcone, plural, dividirTitulo, MICROFONE, LUPA } from './comum.js';
+
+const app = $('#app');
+const s = {
+  festa: null,
+  estado: null,
+  tela: null, // rascunho | entrada | festa | encerrada
+  aba: 'fila',
+  busca: { q: '', filtro: '', musicas: [], total: 0, carregando: false },
+  ranking: { tipo: null, lista: [], versao: null, pessoasVazio: false },
+};
+let poll;
+
+async function carregarFesta() {
+  s.festa = await api('GET', '/api/festa');
+  definirIcone(s.festa.tema?.icone);
+  document.title = s.festa.titulo || 'Karaokê';
+}
+
+function telaDesejada() {
+  const status = s.estado?.status ?? s.festa.status;
+  if (status === 'rascunho') return 'rascunho';
+  if (status === 'encerrada') return 'encerrada';
+  return s.estado?.me ? 'festa' : 'entrada';
+}
+
+async function aoEstado(estado) {
+  const anterior = s.estado;
+  s.estado = estado;
+  if (anterior && anterior.status !== estado.status) await carregarFesta();
+  const tela = telaDesejada();
+  if (tela !== s.tela) {
+    s.tela = tela;
+    montar();
+  } else {
+    atualizar();
+  }
+}
+
+// ---------- Montagem por tela ----------
+
+function montar() {
+  if (s.tela === 'rascunho') return montarPreparacao();
+  if (s.tela === 'entrada') return montarEntrada();
+  if (s.tela === 'encerrada') return montarEncerrada();
+  montarFesta();
+}
+
+function montarPreparacao() {
+  app.innerHTML = `
+    <div class="moldura">
+      <p class="rotulo">Karaokê</p>
+      <p class="destaque" style="font-size: 52px;">Festa em preparação</p>
+      ${filete()}
+      <p class="sec" style="font-size: 14px;">A entrada abre assim que a festa começar. Esta página atualiza sozinha.</p>
+    </div>`;
+}
+
+function circuloFesta() {
+  const f = s.festa;
+  return `
+    <div class="circulo">
+      <span class="destaque">${esc(f.nome_destaque)}</span>
+      ${f.subtitulo ? `<span class="subtitulo">${esc(f.subtitulo)}</span>` : ''}
+    </div>`;
+}
+
+function montarEntrada() {
+  const f = s.festa;
+  app.innerHTML = `
+    <form class="moldura" id="form-entrada" novalidate>
+      ${f.arte_url ? `<img class="arte" src="${esc(f.arte_url)}" alt="Arte da festa">` : ''}
+      <p class="rotulo">${esc(f.titulo)}</p>
+      ${circuloFesta()}
+      ${filete()}
+      <p class="frase">Escolha sua música e entre na fila!</p>
+      <div class="campo" style="width: 100%;">
+        <label for="nome">Como você quer aparecer na fila?</label>
+        <input id="nome" class="entrada" maxlength="30" autocomplete="nickname" placeholder="Seu nome ou apelido">
+        <span class="erro-campo" id="erro-nome" hidden></span>
+      </div>
+      <button type="submit" class="btn btn-grande">Entrar na festa</button>
+      <p class="sec">Seu nome fica salvo neste celular.</p>
+    </form>`;
+  $('#form-entrada').onsubmit = async (ev) => {
+    ev.preventDefault();
+    const nome = $('#nome').value.trim();
+    const erroEl = $('#erro-nome');
+    if (!nome) {
+      erroEl.textContent = 'Digite um nome para continuar';
+      erroEl.hidden = false;
+      return;
+    }
+    const botao = ev.submitter;
+    botao.disabled = true;
+    try {
+      await api('POST', '/api/pessoas', { nome });
+      s.aba = 'busca';
+      await poll.agora();
+    } catch (e) {
+      erroEl.textContent = e.message;
+      erroEl.hidden = false;
+    } finally {
+      botao.disabled = false;
+    }
+  };
+}
+
+function cabecalho() {
+  const f = s.festa;
+  const [rotulo, nome] = dividirTitulo(f.titulo, f.nome_destaque);
+  const me = s.estado?.me;
+  return `
+    <header class="topo">
+      <div class="cresce">
+        <p class="rotulo-p">${esc(rotulo)}</p>
+        <p class="destaque">${esc(nome)}</p>
+      </div>
+      ${me ? `<div class="eu">${icone()}<span class="cortar">${esc(me.nome)}</span></div>` : ''}
+    </header>`;
+}
+
+const votacaoLigada = () => Boolean(s.festa.regras?.votacao);
+const abas = () => [
+  ['fila', 'Fila'],
+  ['busca', 'Catálogo'],
+  ['meus', 'Pedidos'],
+  ...(votacaoLigada() ? [['ranking', 'Ranking']] : []),
+];
+
+function montarFesta() {
+  if (!abas().some(([id]) => id === s.aba)) s.aba = 'fila';
+  app.innerHTML = `
+    ${cabecalho()}
+    <main class="conteudo">
+      <div class="pilha" data-aba="fila" style="gap: 18px;"></div>
+      <div class="pilha" data-aba="busca">
+        <label for="busca" class="rotulo" style="font-size: 13px;">Buscar música</label>
+        <div class="busca">${LUPA}<input id="busca" type="search" enterkeyhint="search" autocomplete="off" placeholder="Música, artista ou trecho da letra"></div>
+        <div class="pilulas" id="filtros">
+          <button type="button" class="pilula" data-filtro="">Todas</button>
+          <button type="button" class="pilula" data-filtro="nacionais">Nacionais</button>
+          <button type="button" class="pilula" data-filtro="internacionais">Internacionais</button>
+        </div>
+        <div id="resultado-busca" class="pilha"></div>
+      </div>
+      <div class="pilha" data-aba="meus"></div>
+      <div class="pilha" data-aba="ranking" style="gap: 10px;"></div>
+    </main>
+    <nav class="menu" aria-label="Seções"><div class="menu-dentro" id="menu"></div></nav>`;
+
+  let espera;
+  $('#busca').value = s.busca.q;
+  $('#busca').oninput = (ev) => {
+    clearTimeout(espera);
+    s.busca.q = ev.target.value;
+    espera = setTimeout(buscar, 250);
+  };
+  $('#filtros').onclick = (ev) => {
+    const b = ev.target.closest('[data-filtro]');
+    if (!b) return;
+    s.busca.filtro = b.dataset.filtro;
+    buscar();
+  };
+  $('#menu').onclick = (ev) => {
+    const b = ev.target.closest('[data-ir]');
+    if (b) irPara(b.dataset.ir);
+  };
+  app.onclick = aoClicar;
+  buscar();
+  atualizar();
+}
+
+function irPara(aba) {
+  s.aba = aba;
+  atualizar();
+  window.scrollTo(0, 0);
+  if (aba === 'busca' && !s.busca.musicas.length) buscar();
+}
+
+function atualizar() {
+  if (s.tela === 'encerrada') return renderRanking($('#ranking-final'), true);
+  if (s.tela !== 'festa') return;
+  for (const el of app.querySelectorAll('[data-aba]')) el.hidden = el.dataset.aba !== s.aba;
+  const ativos = s.estado.limite.ativos;
+  $('#menu').innerHTML = abas()
+    .map(([id, nome]) => `<button type="button" data-ir="${id}" ${s.aba === id ? 'aria-current="page"' : ''}>${nome}${id === 'meus' && ativos ? ` (${ativos})` : ''}</button>`)
+    .join('');
+  if (s.aba === 'fila') renderFila();
+  if (s.aba === 'busca') renderBusca();
+  if (s.aba === 'meus') renderMeus();
+  if (s.aba === 'ranking') renderRanking($('[data-aba="ranking"]'));
+}
+
+// ---------- Fila ----------
+
+function renderFila() {
+  const e = s.estado;
+  const a = e.atual;
+  const palco = a
+    ? `
+      <div class="entre" style="align-items: flex-end;">
+        <div class="cresce pilha" style="gap: 4px;">
+          <span class="titulo-musica">${esc(a.titulo)}</span>
+          <span class="sub">${esc(a.artista)}</span>
+        </div>
+        <div class="codigo"><small>CÓDIGO</small><strong>${esc(a.cod)}</strong></div>
+      </div>
+      <div class="cantor">${MICROFONE}<span class="destaque">${esc(a.cantor)}</span></div>
+      ${a.meu ? `
+        <div class="minha-vez">
+          <span class="rotulo" style="letter-spacing: 0.18em;">É a sua vez!</span>
+          <span class="destaque" style="font-size: 32px;">Cantou?</span>
+          <button type="button" class="btn" style="height: 48px;" data-acao="cantou" data-id="${a.id}">Sim, já cantei</button>
+        </div>` : ''}`
+    : '<p class="destaque palco-livre">O palco está livre!</p>';
+
+  const votos = e.votacoes.filter((v) => !v.meu).map(cartaoVoto).join('');
+  const proximos = e.proximos.length
+    ? e.proximos.map((p, i) => `
+        <div class="item ${p.meu ? 'item-meu' : ''}" style="padding: 10px 12px;">
+          <span class="num">${i + 1}</span>
+          <div class="cresce">
+            <div class="titulo-item cortar">${esc(p.cantor)}</div>
+            <div class="sec cortar">${esc(p.titulo)} · ${esc(p.artista)}</div>
+          </div>
+          ${p.meu ? '<span class="selo selo-escuro">VOCÊ</span>' : ''}
+        </div>`).join('')
+    : '<p class="sec centro" style="padding: 12px;">Ninguém na fila ainda. Peça uma música no Catálogo!</p>';
+
+  $('[data-aba="fila"]').innerHTML = `
+    <section class="palco no-palco" aria-label="Música da vez">
+      <div class="filete"><span class="rotulo-p">Agora no palco</span></div>
+      ${palco}
+    </section>
+    ${votos}
+    <section class="pilha" style="gap: 8px;" aria-label="Próximos cantores">
+      <div class="cabeca-sec"><h2>Próximos 10</h2><span class="sec">${e.total_fila} na fila</span></div>
+      ${proximos}
+    </section>`;
+}
+
+function botoesNota(v) {
+  return `<div class="notas" role="group" aria-label="Nota de 0 a 10">${Array.from({ length: 11 }, (_, n) => `
+    <button type="button" class="nota" data-acao="votar" data-id="${v.pedido_id}" data-nota="${n}"
+      aria-pressed="${v.meu_voto === n}" aria-label="Nota ${n} para ${esc(v.cantor)}">${n}</button>`).join('')}</div>`;
+}
+
+function rodapeVoto(v) {
+  return `${v.meu_voto != null ? `Seu voto: ${v.meu_voto} (dá para mudar) · ` : ''}${plural(v.n_votos, 'voto', 'votos')} até agora. A nota aparece quando a votação fechar.`;
+}
+
+function cartaoVoto(v) {
+  if (v.status === 'na_vez') {
+    return `
+      <section class="cartao-decor pilha" aria-label="Nota da festa: performance atual">
+        <div class="filete">${icone()}<span class="rotulo-p">Nota da festa</span>${icone()}</div>
+        <p class="centro" style="font-size: 15px; line-height: 1.4;">Quanto vale a performance de <span class="destaque" style="font-size: 26px;">${esc(v.cantor)}</span>?</p>
+        ${botoesNota(v)}
+        <span class="sec centro">${rodapeVoto(v)}</span>
+      </section>`;
+  }
+  return `
+    <section class="voto-anterior" aria-label="Nota da festa: performance anterior">
+      <p style="font-size: 13px; line-height: 1.4;"><span class="rotulo-p" style="letter-spacing: 0.12em;">Ainda dá tempo de votar</span><br>${esc(v.cantor)} · ${esc(v.titulo)}</p>
+      ${botoesNota(v)}
+      <span class="sec">${rodapeVoto(v)}</span>
+    </section>`;
+}
+
+// ---------- Catálogo ----------
+
+async function buscar() {
+  const { q, filtro } = s.busca;
+  s.busca.carregando = true;
+  try {
+    const r = await api('GET', `/api/musicas?q=${encodeURIComponent(q.trim())}&filtro=${filtro}`);
+    if (q !== s.busca.q || filtro !== s.busca.filtro) return; // resposta atrasada
+    s.busca.musicas = r.musicas;
+    s.busca.total = r.total;
+  } catch (e) {
+    avisar(e.message);
+  } finally {
+    s.busca.carregando = false;
+  }
+  if (s.aba === 'busca') renderBusca();
+}
+
+function renderBusca() {
+  for (const b of app.querySelectorAll('[data-filtro]')) b.setAttribute('aria-pressed', String(b.dataset.filtro === s.busca.filtro));
+  const { maximo, ativos } = s.estado.limite;
+  const cheio = ativos >= maximo;
+  const { musicas, total } = s.busca;
+  const resumo = total === 0 ? 'Nenhuma música encontrada' : total > musicas.length ? `Mostrando ${musicas.length} de ${total}` : plural(total, 'música', 'músicas');
+  $('#resultado-busca').innerHTML = `
+    ${cheio ? `<p class="aviso">Você já tem ${plural(maximo, 'música', 'músicas')} na fila. Cancele uma em Meus pedidos para pedir outra.</p>` : ''}
+    <span class="sec">${resumo}</span>
+    ${musicas.map((m) => `
+      <div class="item">
+        <div class="cresce pilha" style="gap: 2px;">
+          <span class="titulo-item">${esc(m.titulo)}</span>
+          <span class="sec" style="font-size: 13px;">${esc(m.artista)} · cód. ${esc(m.cod)}</span>
+          ${m.inicio ? `<span class="letra cortar">“${esc(m.inicio)}”</span>` : ''}
+        </div>
+        <button type="button" class="btn btn-pedir" data-acao="pedir" data-cod="${esc(m.cod)}" data-titulo="${esc(m.titulo)}"
+          ${m.na_fila || cheio ? 'disabled' : ''} aria-label="${m.na_fila ? 'Já pedida' : 'Pedir'}: ${esc(m.titulo)}">${m.na_fila ? 'Na fila' : 'Pedir'}</button>
+      </div>`).join('')}`;
+}
+
+// ---------- Pedidos ----------
+
+function renderMeus() {
+  const e = s.estado;
+  const ativos = e.meus_pedidos.filter((p) => p.status !== 'cantou');
+  const cantadas = e.meus_pedidos.filter((p) => p.status === 'cantou');
+  $('[data-aba="meus"]').innerHTML = `
+    <div class="cabeca-sec"><h2>Meus pedidos</h2><span class="sec">${e.limite.ativos} de ${e.limite.maximo}</span></div>
+    ${ativos.length ? '' : `
+      <div class="vazio">
+        <span class="destaque">Nenhuma música na fila</span>
+        <button type="button" class="btn" data-ir-aba="busca">Escolher música</button>
+      </div>`}
+    ${ativos.map((p) => `
+      <div class="item">
+        <div class="centro" style="width: 52px; flex-shrink: 0; display: flex; flex-direction: column;">
+          <span style="font-size: 20px; font-weight: 700;">${p.posicao === 0 ? 'Agora' : p.posicao != null ? `${p.posicao}º` : '–'}</span>
+          <span class="sec" style="font-size: 10px;">${p.status === 'na_vez' ? 'no palco' : p.espera_min != null ? `~${p.espera_min} min` : ''}</span>
+        </div>
+        <div class="cresce pilha" style="gap: 2px;">
+          <span class="titulo-item">${esc(p.titulo)}</span>
+          <span class="sec">${esc(p.artista)} · cód. ${esc(p.cod)}</span>
+        </div>
+        ${p.status === 'pendente' ? `<button type="button" class="btn btn-alerta btn-pequeno" data-acao="cancelar" data-id="${p.id}" aria-label="Cancelar ${esc(p.titulo)}">Cancelar</button>` : ''}
+      </div>`).join('')}
+    ${cantadas.length ? `
+      <div class="cabeca-sec" style="margin-top: 8px;"><h2>Já cantei</h2></div>
+      ${cantadas.map((p) => `
+        <div class="linha" style="padding: 10px 12px; border-bottom: 1px solid var(--borda);">
+          <span style="fill: var(--decor); display: flex;">${icone()}</span>
+          <span style="font-size: 14px;">${esc(p.titulo)} · <span class="sec" style="font-size: 14px;">${esc(p.artista)}</span></span>
+        </div>`).join('')}` : ''}`;
+}
+
+// ---------- Ranking ----------
+
+async function carregarRanking(tipo) {
+  const r = await api('GET', `/api/ranking?tipo=${tipo}`);
+  return r.ranking;
+}
+
+async function renderRanking(alvo, final = false) {
+  if (!alvo) return;
+  const regras = s.festa.regras;
+  const comPessoas = Boolean(regras.ranking_pessoas);
+  const versao = s.estado?.versao;
+  // Primeira vez: abre em Pessoas; se vazio, cai em Performances com aviso (SPEC 9).
+  if (!s.ranking.tipo || s.ranking.versao !== versao) {
+    try {
+      if (!s.ranking.tipo) {
+        s.ranking.tipo = comPessoas ? 'pessoas' : 'performances';
+        if (comPessoas) {
+          const pessoas = await carregarRanking('pessoas');
+          s.ranking.pessoasVazio = !pessoas.length;
+          if (!pessoas.length) s.ranking.tipo = 'performances';
+        }
+      }
+      s.ranking.lista = await carregarRanking(s.ranking.tipo);
+      if (s.ranking.tipo === 'pessoas') s.ranking.pessoasVazio = !s.ranking.lista.length;
+      s.ranking.versao = versao;
+    } catch (e) {
+      alvo.innerHTML = `<p class="aviso aviso-alerta">${esc(e.message)}</p>`;
+      return;
+    }
+  }
+  const tipo = s.ranking.tipo;
+  const legenda = tipo === 'pessoas'
+    ? `Média das notas de cada pessoa · mínimo de ${plural(regras.minimo_performances, 'performance', 'performances')}`
+    : `Mediana dos votos de 0 a 10 · mínimo de ${plural(regras.minimo_votos, 'voto', 'votos')}`;
+  const itens = s.ranking.lista.map((r, i) => {
+    const topo = i === 0 ? 'rank-topo' : '';
+    if (tipo === 'pessoas') {
+      return `
+        <div class="rank ${topo}">
+          <span class="pos">${r.posicao}</span>
+          <div class="cresce pilha" style="gap: 2px;">
+            <span class="destaque">${esc(r.nome)}</span>
+            <span class="sub cortar">${plural(r.n_performances, 'performance', 'performances')} · melhor: ${formatar(r.melhor)}</span>
+          </div>
+          <div class="codigo"><span class="valor">${esc(r.media_texto)}</span><span class="sub">média</span></div>
+        </div>`;
+    }
+    return `
+      <div class="rank ${topo}">
+        <span class="pos">${r.posicao}</span>
+        <div class="cresce pilha" style="gap: 2px;">
+          <span class="destaque">${esc(r.cantor)}</span>
+          <span class="sub cortar">${esc(r.titulo)} · ${esc(r.artista)}</span>
+        </div>
+        <div class="codigo"><span class="valor">${esc(r.nota_texto)}</span><span class="sub">${plural(r.n_votos, 'voto', 'votos')}</span></div>
+      </div>`;
+  });
+  const abertas = final ? [] : (s.estado?.votacoes ?? []).filter((v) => v.status === 'cantou');
+  alvo.innerHTML = `
+    <div class="centro pilha" style="gap: 2px; align-items: center; padding-bottom: 4px;">
+      <span class="rotulo-p">Nota da festa</span>
+      <span class="destaque" style="font-size: 44px; line-height: 1.1;">${final ? 'Ranking final' : 'Ranking'}</span>
+      ${filete()}
+      <span class="sec" style="padding-top: 4px;">${legenda}</span>
+    </div>
+    ${comPessoas ? `
+      <div class="alternador" role="group" aria-label="Tipo de ranking">
+        <button type="button" data-acao="tipo-ranking" data-tipo="pessoas" aria-pressed="${tipo === 'pessoas'}">Pessoas</button>
+        <button type="button" data-acao="tipo-ranking" data-tipo="performances" aria-pressed="${tipo === 'performances'}">Performances</button>
+      </div>` : ''}
+    ${comPessoas && tipo === 'performances' && s.ranking.pessoasVazio
+      ? `<p class="aviso">O ranking de pessoas aparece quando alguém tiver ${plural(regras.minimo_performances, 'performance', 'performances')} com nota.</p>` : ''}
+    ${itens.length ? itens.join('') : '<p class="destaque centro" style="padding: 24px; font-size: 28px;">Nenhuma votação fechada ainda</p>'}
+    ${abertas.map((v) => `<p class="aviso" style="margin-top: 4px;">Votação aberta para ${esc(v.cantor)} (${esc(v.titulo)}). Entra no ranking quando a próxima performance terminar.</p>`).join('')}`;
+}
+
+const formatar = (n) => (n == null ? '' : (Math.round(n * 10) / 10).toFixed(1).replace('.', ','));
+
+// ---------- Encerrada ----------
+
+function montarEncerrada() {
+  const f = s.festa;
+  app.innerHTML = `
+    ${cabecalho()}
+    <main class="conteudo" style="padding-bottom: 32px;">
+      ${f.arte_url ? `<img class="arte" src="${esc(f.arte_url)}" alt="Arte da festa">` : ''}
+      <div class="centro pilha" style="align-items: center; gap: 8px;">
+        <p class="destaque" style="font-size: 56px;">Obrigado!</p>
+        <p class="sec" style="font-size: 14px;">A festa terminou. Pedidos e votos estão encerrados.</p>
+      </div>
+      ${votacaoLigada() ? '<div class="pilha" id="ranking-final" style="gap: 10px;"></div>' : ''}
+    </main>`;
+  app.onclick = aoClicar;
+  s.ranking.tipo = null;
+  atualizar();
+}
+
+// ---------- Ações ----------
+
+async function aoClicar(ev) {
+  const irAba = ev.target.closest('[data-ir-aba]');
+  if (irAba) return irPara(irAba.dataset.irAba);
+  const b = ev.target.closest('[data-acao]');
+  if (!b || b.disabled) return;
+  const { acao, id } = b.dataset;
+  try {
+    if (acao === 'pedir') {
+      b.disabled = true;
+      const { posicao_estimada: pos } = await api('POST', '/api/pedidos', { musica_cod: b.dataset.cod });
+      const min = s.festa.regras.minutos_por_musica;
+      avisar(`${b.dataset.titulo} entrou na fila. ${pos === 0 ? 'É a sua vez!' : pos === 1 ? 'Você é o próximo!' : `Posição estimada: ${pos}º (~${pos * min} min).`}`);
+      const musica = s.busca.musicas.find((m) => m.cod === b.dataset.cod);
+      if (musica) musica.na_fila = true;
+    } else if (acao === 'cancelar') {
+      b.disabled = true;
+      await api('DELETE', `/api/pedidos/${id}`);
+      avisar('Pedido cancelado.');
+      buscar();
+    } else if (acao === 'cantou') {
+      b.disabled = true;
+      await api('POST', `/api/pedidos/${id}/cantou`);
+      avisar(votacaoLigada() ? 'Arrasou! A galera está votando na sua nota.' : 'Arrasou! A fila andou.');
+      buscar();
+    } else if (acao === 'votar') {
+      const nota = Number(b.dataset.nota);
+      await api('PUT', '/api/votos', { pedido_id: Number(id), nota });
+      avisar(`Voto registrado: ${nota}.`);
+    } else if (acao === 'tipo-ranking') {
+      s.ranking.tipo = b.dataset.tipo;
+      s.ranking.versao = null;
+      return atualizar();
+    }
+    await poll.agora();
+  } catch (e) {
+    avisar(e.message);
+    if (e.status === 401 || e.status === 403) await poll.agora();
+    else atualizar();
+  }
+}
+
+// ---------- Início ----------
+
+try {
+  await carregarFesta();
+  poll = vigiar('/api/estado', aoEstado, { aoErro: () => {} });
+} catch (e) {
+  app.innerHTML = `<div class="moldura"><p class="destaque" style="font-size: 40px;">Ops!</p><p class="sec">${esc(e.message)}</p></div>`;
+}

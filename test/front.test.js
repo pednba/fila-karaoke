@@ -1,0 +1,74 @@
+import { test, before, after } from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { abrirBanco } from '../db.js';
+import { criarApp } from '../app.js';
+
+const TOKEN = 'token-de-setup-para-testes';
+let dataDir;
+let db;
+let servidor;
+let base;
+
+before(async () => {
+  dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'karaoke-front-'));
+  db = abrirBanco(path.join(dataDir, 'karaoke.db'));
+  const app = criarApp({
+    db,
+    config: { dataDir, publicUrl: 'https://karaoke.exemplo.com.br', setupToken: TOKEN, cookieSecret: 'segredo-dos-cookies-de-teste', cookiesSeguros: false },
+  });
+  await new Promise((ok) => (servidor = app.listen(0, '127.0.0.1', ok)));
+  base = `http://127.0.0.1:${servidor.address().port}`;
+});
+
+after(() => {
+  servidor.close();
+  db.close();
+  fs.rmSync(dataDir, { recursive: true, force: true });
+});
+
+test('páginas do front são servidas como HTML, com e sem extensão', async () => {
+  for (const rota of ['/', '/admin', '/setup', '/setup.html']) {
+    const res = await fetch(base + rota);
+    assert.equal(res.status, 200, rota);
+    assert.match(res.headers.get('content-type'), /text\/html/, rota);
+    assert.match(await res.text(), /<html lang="pt-BR">/, rota);
+  }
+  for (const arquivo of ['/estilo.css', '/comum.js', '/convidado.js', '/admin.js', '/setup.js']) {
+    assert.equal((await fetch(base + arquivo)).status, 200, arquivo);
+  }
+});
+
+test('/tema.css traz os tokens do tema atual e a fonte de destaque', async () => {
+  const res = await fetch(base + '/tema.css');
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get('content-type'), /text\/css/);
+  assert.equal(res.headers.get('cache-control'), 'no-cache');
+  const css = await res.text();
+  assert.match(css, /^@import url\("https:\/\/fonts\.googleapis\.com\//);
+  for (const token of ['--fundo', '--palco', '--decor', '--destaque-palco', '--texto-2', '--fonte-destaque']) {
+    assert.ok(css.includes(`${token}:`), token);
+  }
+});
+
+test('/api/festa diz se o admin já foi configurado', async () => {
+  let festa = await (await fetch(base + '/api/festa')).json();
+  assert.equal(festa.admin_configurado, false);
+  const res = await fetch(base + '/api/setup/pin', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'X-Setup-Token': TOKEN },
+    body: JSON.stringify({ pin: '1234', confirmacao: '1234' }),
+  });
+  assert.equal(res.status, 200);
+  festa = await (await fetch(base + '/api/festa')).json();
+  assert.equal(festa.admin_configurado, true);
+  assert.equal(festa.admin_pin_hash, undefined);
+});
+
+test('rota de API inexistente continua respondendo JSON 404', async () => {
+  const res = await fetch(base + '/api/nao-existe');
+  assert.equal(res.status, 404);
+  assert.equal((await res.json()).erro, 'rota_inexistente');
+});

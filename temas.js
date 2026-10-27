@@ -93,6 +93,11 @@ export function montarTema({ preset = PRESET_PADRAO, destaque = null, fonte = nu
   return { preset, destaque: destaque ? destaque.toUpperCase() : null, fonte: fonte || base.fonte, icone: base.icone, tokens };
 }
 
+// Folha do Google Fonts com a fonte de destaque e a base.
+export function urlFontes(fonte) {
+  return `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fonte).replace(/%20/g, '+')}&family=${FONTE_BASE}:wght@400;500;600;700&display=swap`;
+}
+
 // Variáveis CSS para :root a partir de festa.tema.
 export function cssDoTema(tema) {
   const linhas = Object.entries(tema.tokens).map(([k, v]) => `--${k}: ${v};`);

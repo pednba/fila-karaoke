@@ -1,6 +1,6 @@
 // Operação da fila e da votação sobre o banco (SPEC 8 e 9). As regras ficam em fila.js e votos.js;
 // aqui só se lê o estado, aplica a decisão e grava. Funções que escrevem devem rodar dentro de `escrever`.
-import { ordenar, mover, decidirPulo, validarPedido } from './fila.js';
+import { ordenar, mover, decidirPulo, validarPedido, liberadoParaCantou, MINUTOS_PARA_AVANCAR } from './fila.js';
 import { validarVoto, votacoesAFechar, resumoAberta, rankingPerformances, rankingPessoas } from './votos.js';
 import { gravarMeta, lerMeta } from './db.js';
 import { lerFesta } from './festa.js';
@@ -99,13 +99,18 @@ export function cancelar(db, { id, pessoa_id }) {
 
 // Cantou (SPEC 8.4 e 9): fecha a votação da performance anterior, mantém a deste pedido aberta e avança.
 // pessoa_id null = admin.
-export function cantou(db, { id = null, pessoa_id = null }) {
+// pessoa_id null = admin. Convidado: regra de liberadoParaCantou.
+export function cantou(db, { id = null, pessoa_id = null, agora = Date.now() }) {
   const festa = lerFesta(db);
   exigirAberta(festa);
   const atual = pedidoNaVez(db);
   if (!atual) throw erro(409, 'palco_vazio', 'Não há ninguém no palco.');
   if (id != null && atual.id !== id) throw erro(409, 'nao_esta_na_vez', 'Esse pedido não está no palco.');
-  if (pessoa_id != null && atual.pessoa_id !== pessoa_id) throw erro(403, 'pedido_alheio', 'Só quem está no palco pode confirmar.');
+  if (pessoa_id != null) {
+    const desde = liberadoParaCantou({ pessoa_id, atual, fila: filaOrdenada(db, festa) });
+    if (desde == null) throw erro(403, 'pedido_alheio', 'Só quem está no palco ou esperando na fila pode confirmar.');
+    if (agora < desde) throw erro(403, 'cedo_demais', `Espere ${MINUTOS_PARA_AVANCAR} minutos de música antes de avançar a fila.`);
+  }
 
   db.prepare("UPDATE pedidos SET status = 'cantou', finalizado_em = datetime('now') WHERE id = ?").run(atual.id);
   gravarMeta(db, 'ultimo_cantor_id', atual.pessoa_id);

@@ -24,7 +24,7 @@ O setup mostra a capacidade estimada da festa: `músicas = duração_em_min / mi
 - Pedido de música com limite de pendentes por pessoa, cancelar o próprio pedido.
 - Fila por rodadas com regra de "ninguém canta 2 seguidas".
 - Destaque da música da vez + próximos 10.
-- "Cantou?" para o cantor da vez.
+- "Cantou?" para o cantor da vez; "Fulano já terminou?" para quem está na fila (menos o próximo) depois de 2 minutos (8.4).
 - Admin: Cantou, Pular ausente, mudar ordem, bypass da regra, VIP (várias pessoas), adicionar pedido para quem não tem celular.
 - Nota da festa: voto 0 a 10 por performance, mediana, ranking de performances e ranking de pessoas (cada um pode ser desligado no setup).
 - Encerrar festa (ranking final em modo leitura) e arquivar para começar outra.
@@ -256,7 +256,7 @@ Quando o `na_vez` sai (cantou, pulado ou removido), na mesma transação, promov
 |---|---|---|
 | Pedir | convidado | Valida música, limite de pendentes (`pendente` + `na_vez`) e pedido repetido. `t_fila = agora`. |
 | Cancelar | dono | Só `pendente`. |
-| Cantou | dono do `na_vez` ou admin | Vira `cantou`, atualiza último cantor, votações (seção 9), avança. |
+| Cantou | dono do `na_vez` ou admin a qualquer momento; outra pessoa com pedido `pendente`, menos o dono do primeiro de `ordenar` (o próximo), depois de 2 minutos de `na_vez_em` | Vira `cantou`, atualiza último cantor, votações (seção 9), avança. Fora da regra: `403 pedido_alheio`; antes dos 2 minutos: `403 cedo_demais`. |
 | Pular ausente | admin | Antes do limite de pulos: volta a `pendente`, `pulos + 1`, `t_fila = agora`, `ordem_manual = NULL`, apaga votos do pedido, avança. No limite: `removido`, avança. |
 | Mover ↑/↓ | admin | Materializa a ordem atual em `ordem_manual = 0..n` e troca o par. |
 | Bypass | admin | Liga/desliga no pedido. |
@@ -298,7 +298,7 @@ JSON. Erros: `{ "erro": "codigo", "mensagem": "texto para a tela" }`.
 | `GET /api/festa` | | dados públicos: status, título, nome em destaque, subtítulo, data, local, url da arte, tema, regras visíveis |
 | `GET /api/festa/arte` | | a imagem |
 | `POST /api/pessoas` | `{nome}` | `201` + cookie; `409 nome_em_uso`; `403 festa_fechada` |
-| `GET /api/estado` | | `{versao, me: {nome, vip, email}, atual, proximos[10], total_fila, meus_pedidos[], votacoes[], limite}` |
+| `GET /api/estado` | | `{versao, me: {nome, vip, email}, atual, proximos[10], total_fila, meus_pedidos[], votacoes[], limite}`; `atual.liberado_em` (ISO ou `null`) diz a partir de quando o convidado do cookie, se não for o dono, pode marcar Cantou (8.4) |
 | `GET /api/musicas?q=&filtro=&artista=&offset=` | | página de até 20 + `total` + `offset` (5.4, 5.5) |
 | `GET /api/artistas?filtro=` | | `{artistas: [{nome, chave, total}]}` em ordem A–Z (5.5) |
 | `PUT /api/me/email` | `{email}` | `200 {email}`; `email_invalido`, `email_desligado`, `festa_fechada` (9.1) |
@@ -368,7 +368,7 @@ Referência visual: `docs/design/` (formato do protótipo; ver o LEIA-ME de lá)
 - **Entrada:** arte da festa (se houver), nome em destaque e subtítulo dentro do círculo decorativo, campo de nome, "Entrar na festa".
 - **Cabeçalho:** título curto + nome do convidado.
 - **Menu inferior:** Fila · Catálogo · Pedidos (n) · Ranking.
-- **Fila:** "Agora no palco" (título, artista, código grande, cantor); "Cantou?" quando é a vez do usuário; cartões de voto (atual e anterior); "Próximos 10" com o usuário destacado.
+- **Fila:** "Agora no palco" (título, artista, código grande, cantor); "Cantou?" quando é a vez do usuário; "Fulano já terminou?" (com confirmação) quando `atual.liberado_em` já passou; cartões de voto (atual e anterior); "Próximos 10" com o usuário destacado.
 - **Catálogo:** busca, Músicas / Artistas, filtros, rolagem infinita, "Você pode gostar", "Pedir"/"Na fila", aviso de limite.
 - **Pedidos:** posição, espera estimada, cancelar, "Já cantei".
 - **Ranking:** Pessoas / Performances.
@@ -408,7 +408,7 @@ Ver `README.md`. Variáveis de ambiente (`.env.example`): `PORT`, `PUBLIC_URL`, 
 - Uma festa por instalação; arquivar para reutilizar.
 - Primeiro acesso protegido por `SETUP_TOKEN`.
 - Fila por rodadas; anti-repetição com bypass; ordem manual do admin prevalece.
-- Cantor confirma "Cantou?"; admin pula ausentes.
+- Cantor confirma "Cantou?"; depois de 2 minutos, quem está na fila (menos o próximo) também pode; admin pula ausentes.
 - VIP = prioridade leve, várias pessoas, marcado pelo admin.
 - Nota da festa: 0 a 10, mediana, parcial escondida, janela até a próxima performance terminar.
 - Ranking de pessoas: média das medianas com mínimo de performances.

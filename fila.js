@@ -82,3 +82,21 @@ export function validarPedido({ meusPedidos, musica_cod, limite }) {
   if (ativos.length >= limite) return 'limite_atingido';
   return null;
 }
+
+// Quem pode marcar "Cantou" (SPEC 8.4). Devolve o instante (ms) a partir do qual a pessoa pode,
+// ou null se ela não pode. O dono pode sempre; outra pessoa com pedido na fila, menos o próximo,
+// depois de MINUTOS_PARA_AVANCAR de música.
+//   atual: pedido na_vez com { pessoa_id, na_vez_em }; fila: pendentes já ordenados
+export const MINUTOS_PARA_AVANCAR = 2;
+
+export function liberadoParaCantou({ pessoa_id, atual, fila }) {
+  if (!atual || pessoa_id == null) return null;
+  if (atual.pessoa_id === pessoa_id) return 0;
+  if (fila[0]?.pessoa_id === pessoa_id || !fila.some((p) => p.pessoa_id === pessoa_id)) return null;
+  return instanteSqlite(atual.na_vez_em) + MINUTOS_PARA_AVANCAR * 60_000;
+}
+
+// datetime('now') do SQLite é UTC sem fuso: "2026-11-02 21:00:00".
+function instanteSqlite(texto) {
+  return texto ? Date.parse(`${texto.replace(' ', 'T')}Z`) : 0;
+}

@@ -226,6 +226,20 @@ function atualizar() {
 
 // ---------- Fila ----------
 
+// Quem está na fila (menos o próximo) pode avançar depois de alguns minutos (SPEC 8.4).
+let timerLiberar = null;
+
+function botaoTerminou(a) {
+  clearTimeout(timerLiberar);
+  if (a.meu || !a.liberado_em) return '';
+  const falta = Date.parse(a.liberado_em) - Date.now();
+  if (falta > 0) {
+    timerLiberar = setTimeout(() => { if (s.aba === 'fila') renderFila(); }, falta + 500);
+    return '';
+  }
+  return `<button type="button" class="btn btn-palco-claro btn-pequeno" style="margin-top: 12px; width: 100%;" data-acao="terminou" data-id="${a.id}" data-cantor="${esc(a.cantor)}">${esc(a.cantor)} já terminou?</button>`;
+}
+
 function renderFila() {
   const e = s.estado;
   const a = e.atual;
@@ -244,7 +258,7 @@ function renderFila() {
           <span class="rotulo" style="letter-spacing: 0.18em;">É a sua vez!</span>
           <span class="destaque" style="font-size: 32px;">Cantou?</span>
           <button type="button" class="btn" style="height: 48px;" data-acao="cantou" data-id="${a.id}">Sim, já cantei</button>
-        </div>` : ''}`
+        </div>` : botaoTerminou(a)}`
     : '<p class="destaque palco-livre">O palco está livre!</p>';
 
   const votos = e.votacoes.filter((v) => !v.meu).map(cartaoVoto).join('');
@@ -684,6 +698,11 @@ async function aoClicar(ev) {
       b.disabled = true;
       await api('POST', `/api/pedidos/${id}/cantou`);
       avisar(votacaoLigada() ? 'Arrasou! A galera está votando na sua nota.' : 'Arrasou! A fila andou.');
+    } else if (acao === 'terminou') {
+      if (!confirm(`Confirmar que ${b.dataset.cantor} já terminou de cantar? A fila vai andar.`)) return;
+      b.disabled = true;
+      await api('POST', `/api/pedidos/${id}/cantou`);
+      avisar('Valeu! A fila andou.');
     } else if (acao === 'votar') {
       const nota = Number(b.dataset.nota);
       await api('PUT', '/api/votos', { pedido_id: Number(id), nota });

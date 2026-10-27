@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ordenar, escolherProximo, mover, decidirPulo, validarPedido } from '../fila.js';
+import { ordenar, escolherProximo, mover, decidirPulo, validarPedido, liberadoParaCantou } from '../fila.js';
 
 let seq = 0;
 const pedido = (pessoa_id, t_fila, extra = {}) => ({
@@ -144,4 +144,16 @@ test('10b. pedido repetido vale por pessoa e só para pendente ou na vez', () =>
   ];
   assert.equal(validarPedido({ meusPedidos: meus, musica_cod: '1', limite: 3 }), 'ja_pedida');
   assert.equal(validarPedido({ meusPedidos: meus, musica_cod: '3', limite: 3 }), null);
+});
+
+test('cantou: dono sempre; quem está na fila, menos o próximo, depois de 2 minutos', () => {
+  const atual = { pessoa_id: 'ana', na_vez_em: '2026-11-02 21:00:00' };
+  const fila = [{ pessoa_id: 'bia' }, { pessoa_id: 'caio' }, { pessoa_id: 'bia' }];
+  const inicio = Date.parse('2026-11-02T21:00:00Z');
+  assert.equal(liberadoParaCantou({ pessoa_id: 'ana', atual, fila }), 0);
+  assert.equal(liberadoParaCantou({ pessoa_id: 'caio', atual, fila }), inicio + 2 * 60_000);
+  assert.equal(liberadoParaCantou({ pessoa_id: 'bia', atual, fila }), null, 'o próximo não avança, mesmo com outro pedido depois');
+  assert.equal(liberadoParaCantou({ pessoa_id: 'davi', atual, fila }), null, 'quem não está na fila não avança');
+  assert.equal(liberadoParaCantou({ pessoa_id: null, atual, fila }), null);
+  assert.equal(liberadoParaCantou({ pessoa_id: 'caio', atual: null, fila }), null);
 });

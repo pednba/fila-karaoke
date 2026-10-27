@@ -211,7 +211,7 @@ test('votar: sem voto próprio, voto alterável, parcial escondida', async () =>
   assert.equal((await caio.chamar('GET', '/api/ranking?tipo=performances')).dados.ranking.length, 0);
 });
 
-test('cantou: só o dono ou o admin; votação fecha quando a próxima termina', async () => {
+test('cantou: o próximo da fila não marca; votação fecha quando a próxima termina', async () => {
   const primeiro = (await estado(ana)).atual;
   assert.equal((await bia.chamar('POST', `/api/pedidos/${primeiro.id}/cantou`)).dados.erro, 'pedido_alheio');
   assert.equal((await ana.chamar('POST', '/api/pedidos/99999/cantou')).dados.erro, 'nao_esta_na_vez');
@@ -326,4 +326,41 @@ test('sem SMTP configurado, o e-mail do ranking fica desligado', async () => {
   const r = await ana.chamar('PUT', '/api/me/email', { corpo: { email: 'ana@exemplo.com' } });
   assert.equal(r.status, 404);
   assert.equal(r.dados.erro, 'email_desligado');
+});
+
+test('cantou por quem está na fila: menos o próximo, depois de 2 minutos; estado mostra quando libera', async () => {
+  const { garantirFesta } = await import('../festa.js');
+  const { gravarCatalogo } = await import('../catalogo.js');
+  const { prepararMusicas } = await import('../importadores/index.js');
+  const { pedir, cantou } = await import('../operacao.js');
+  const { estadoPublico } = await import('../rotas/publico.js');
+  const mem = abrirBanco(':memory:');
+  garantirFesta(mem);
+  const musicas = ['1', '2', '3'].map((cod) => ({ cod, titulo: `M${cod}`, artista: 'X', inicio: '', idioma: 'BRA' }));
+  gravarCatalogo(mem, { musicas: prepararMusicas(musicas), origem: 'teste', statusFesta: 'rascunho' });
+  mem.prepare("UPDATE festa SET status = 'aberta' WHERE id = 1").run();
+  for (const nome of ['ana', 'bia', 'caio', 'davi']) mem.prepare('INSERT INTO pessoas (id, nome, nome_norm) VALUES (?, ?, ?)').run(nome, nome, nome);
+  pedir(mem, { pessoa_id: 'ana', musica_cod: '1' });
+  pedir(mem, { pessoa_id: 'bia', musica_cod: '2' });
+  pedir(mem, { pessoa_id: 'caio', musica_cod: '3' });
+  mem.prepare("UPDATE pedidos SET na_vez_em = '2026-11-02 21:00:00' WHERE status = 'na_vez'").run();
+  const inicio = Date.parse('2026-11-02T21:00:00Z');
+  const pessoa = (id) => ({ id, nome: id, vip: 0 });
+
+  assert.equal(estadoPublico(mem, pessoa('caio')).atual.liberado_em, '2026-11-02T21:02:00.000Z');
+  assert.equal(estadoPublico(mem, pessoa('bia')).atual.liberado_em, null);
+  assert.equal(estadoPublico(mem, pessoa('davi')).atual.liberado_em, null);
+  assert.equal(estadoPublico(mem, pessoa('ana')).atual.liberado_em, null); // dona usa o "Cantou?"
+
+  const tentar = (pessoa_id, agora) => {
+    try { cantou(mem, { pessoa_id, agora }); return 'ok'; } catch (e) { return e.codigo; }
+  };
+  const depois = inicio + 2 * 60_000;
+  assert.equal(tentar('bia', depois), 'pedido_alheio');
+  assert.equal(tentar('davi', depois), 'pedido_alheio');
+  assert.equal(tentar('caio', depois - 1000), 'cedo_demais');
+  assert.equal(tentar('caio', depois), 'ok');
+  assert.equal(mem.prepare("SELECT pessoa_id FROM pedidos WHERE status = 'na_vez'").pluck().get(), 'bia');
+  assert.equal(tentar('bia', inicio), 'ok', 'a dona avança a qualquer momento');
+  mem.close();
 });

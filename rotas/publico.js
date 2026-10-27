@@ -6,6 +6,7 @@ import { escrever, lerVersao } from '../db.js';
 import { lerFesta } from '../festa.js';
 import { normalizar, normalizarBusca } from '../texto.js';
 import { formatarNota } from '../votos.js';
+import { liberadoParaCantou } from '../fila.js';
 import { listarArtistas, sugerir } from '../artistas.js';
 import { validarEmail } from '../email.js';
 import {
@@ -171,7 +172,7 @@ export function rotasPublicas({ db, config, auth, email }) {
     res.status(204).end();
   });
 
-  // Dono do pedido na vez, ou admin.
+  // Admin, dono do pedido na vez ou, depois de 2 minutos, quem está na fila menos o próximo (SPEC 8.4).
   r.post('/pedidos/:id/cantou', (req, res) => {
     const id = Number(req.params.id);
     if (auth.ehAdmin(req)) {
@@ -197,6 +198,13 @@ export function rotasPublicas({ db, config, auth, email }) {
   });
 
   return r;
+}
+
+// Para quem não é o dono: a partir de quando pode marcar "Cantou" (ISO), ou null.
+function liberadoEm(naVez, me, fila) {
+  if (naVez.pessoa_id === me) return null;
+  const desde = liberadoParaCantou({ pessoa_id: me, atual: naVez, fila });
+  return desde == null ? null : new Date(desde).toISOString();
 }
 
 // GET /api/estado (SPEC 10.2).
@@ -229,7 +237,7 @@ export function estadoPublico(db, pessoa) {
     versao: lerVersao(db),
     status: festa.status,
     me: pessoa ? { nome: pessoa.nome, vip: Boolean(pessoa.vip), email: pessoa.email ?? null } : null,
-    atual: naVez ? pedidoPublico(naVez, me) : null,
+    atual: naVez ? { ...pedidoPublico(naVez, me), liberado_em: liberadoEm(naVez, me, fila) } : null,
     proximos: fila.slice(0, PROXIMOS).map((p) => pedidoPublico(p, me)),
     total_fila: fila.length,
     meus_pedidos,

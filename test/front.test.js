@@ -30,14 +30,27 @@ after(() => {
 });
 
 test('páginas do front são servidas como HTML, com e sem extensão', async () => {
-  for (const rota of ['/', '/admin', '/setup', '/setup.html']) {
+  for (const rota of ['/', '/admin', '/setup', '/setup.html', '/privacidade']) {
     const res = await fetch(base + rota);
     assert.equal(res.status, 200, rota);
     assert.match(res.headers.get('content-type'), /text\/html/, rota);
     assert.match(await res.text(), /<html lang="pt-BR">/, rota);
   }
-  for (const arquivo of ['/estilo.css', '/comum.js', '/convidado.js', '/admin.js', '/setup.js']) {
+  for (const arquivo of ['/estilo.css', '/comum.js', '/convidado.js', '/admin.js', '/setup.js', '/privacidade.js']) {
     assert.equal((await fetch(base + arquivo)).status, 200, arquivo);
+  }
+});
+
+test('fontes saem do próprio servidor e nenhuma página chama terceiros (SPEC 7.1)', async () => {
+  const css = await (await fetch(base + '/fontes/fontes.css')).text();
+  const arquivos = [...css.matchAll(/url\(([^)]+\.woff2)\)/g)].map((m) => m[1]);
+  assert.ok(arquivos.length >= 5);
+  for (const arquivo of arquivos) {
+    const res = await fetch(`${base}/fontes/${arquivo}`);
+    assert.equal(res.status, 200, arquivo);
+  }
+  for (const rota of ['/', '/admin', '/setup', '/privacidade']) {
+    assert.doesNotMatch(await (await fetch(base + rota)).text(), /https?:\/\//, rota);
   }
 });
 
@@ -47,7 +60,8 @@ test('/tema.css traz os tokens do tema atual e a fonte de destaque', async () =>
   assert.match(res.headers.get('content-type'), /text\/css/);
   assert.equal(res.headers.get('cache-control'), 'no-cache');
   const css = await res.text();
-  assert.match(css, /^@import url\("https:\/\/fonts\.googleapis\.com\//);
+  assert.match(css, /^@import url\("\/fontes\/fontes\.css"\);/);
+  assert.doesNotMatch(css, /googleapis|gstatic/);
   for (const token of ['--fundo', '--palco', '--decor', '--destaque-palco', '--texto-2', '--fonte-destaque']) {
     assert.ok(css.includes(`${token}:`), token);
   }

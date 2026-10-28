@@ -21,6 +21,7 @@ export function rotasFesta({ db, config, auth, email }) {
       inicio_em: f.inicio_em,
       duracao_min: f.duracao_min,
       local: f.local,
+      contato: f.contato, // página de privacidade (SPEC 7.1)
       arte_url: f.arte_arquivo ? '/api/festa/arte' : null,
       tema: f.tema,
       regras: { pendentes_por_pessoa, minutos_por_musica, votacao, ranking_pessoas, minimo_votos, minimo_performances },

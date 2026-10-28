@@ -241,3 +241,8 @@ select.entrada { appearance: auto; }
 .tabela td { padding: 8px 0; border-bottom: 1px solid var(--borda); vertical-align: top; }
 .tabela td:last-child { text-align: right; font-weight: 600; overflow-wrap: anywhere; }
 pre.amostra { margin: 0; padding: 10px; border-radius: 10px; background: var(--superficie); border: 1px solid var(--borda); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 180px; overflow-y: auto; }
+
+/* Página de privacidade */
+.texto-longo { padding-bottom: 32px; line-height: 1.55; }
+.texto-longo ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.texto-longo h2 { color: var(--texto-2); }

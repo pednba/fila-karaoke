@@ -38,6 +38,7 @@ A fonte da verdade é a [`SPEC.md`](SPEC.md). Este README resume o que existe e 
 | Nota da festa | Voto de 0 a 10 em cada performance; a nota é a mediana. A parcial fica escondida enquanto a votação está aberta | 9 |
 | Ranking | De performances e de pessoas, com mínimos configuráveis | 9 |
 | Ranking por e-mail | Opcional, com SMTP: quem deixar o e-mail recebe o ranking final, e o endereço é apagado depois | 9.1 |
+| Privacidade | Aviso de cookie na entrada e página `/privacidade`. Só cookies essenciais, nada de terceiros no navegador (as fontes saem do próprio servidor), por isso sem banner de consentimento | 7.1 |
 
 ### Para quem organiza (`/admin`)
 
@@ -107,7 +108,9 @@ public/
   index.html, convidado.js   tela do convidado
   admin.html, admin.js       painel do admin
   setup.html, setup.js       assistente de setup
+  privacidade.html, .js      página de privacidade
   comum.js, estilo.css       utilitários e estilos comuns
+  fontes/                    fontes woff2 servidas pelo app (licença OFL)
 integracoes/            script opcional da máquina de karaokê (Python)
 deploy/                 modelos de nginx e systemd
 docs/design/            referência visual aprovada (tema Dourado clássico)

@@ -223,6 +223,9 @@ function passoFesta() {
       </div>
       <div class="campo"><label for="local">Local (opcional)</label>
         <input id="local" name="local" class="entrada" maxlength="120" value="${esc(f.local)}"></div>
+      <div class="campo"><label for="contato">Seu contato (opcional)</label>
+        <input id="contato" name="contato" class="entrada" maxlength="120" value="${esc(f.contato)}" placeholder="E-mail ou telefone">
+        <span class="sec">Aparece na página de privacidade, para quem quiser falar sobre os próprios dados.</span></div>
       <div class="campo"><label for="convidados">Convidados (estimativa)</label>
         <input id="convidados" name="convidados" class="entrada" type="number" min="1" max="1000" step="1" inputmode="numeric" required value="${f.convidados ?? ''}"></div>
       <span class="erro-campo erro-form" hidden></span>
@@ -237,6 +240,7 @@ function passoFesta() {
       inicio_em: comFuso(d.get('inicio_em')),
       duracao_horas: Number(String(d.get('duracao_horas')).replace(',', '.')),
       local: d.get('local'),
+      contato: d.get('contato'),
       convidados: Number(d.get('convidados')),
     });
   });
@@ -568,6 +572,7 @@ function passoPublicar() {
         <tr><td>Início</td><td>${esc(inicio)}</td></tr>
         <tr><td>Duração</td><td>${f.duracao_min ? formatarDuracao(f.duracao_min) : '–'}</td></tr>
         ${f.local ? `<tr><td>Local</td><td>${esc(f.local)}</td></tr>` : ''}
+        ${f.contato ? `<tr><td>Contato</td><td>${esc(f.contato)}</td></tr>` : ''}
         <tr><td>Convidados</td><td>${f.convidados ?? '–'}</td></tr>
         <tr><td>Tema</td><td>${esc(preset?.nome ?? f.tema.preset)} · ${esc(f.tema.fonte)}${f.tema.destaque ? ` · ${esc(f.tema.destaque)}` : ''}</td></tr>
         <tr><td>Arte</td><td>${f.arte_url ? 'enviada' : 'sem arte'}</td></tr>

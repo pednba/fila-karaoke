@@ -104,12 +104,14 @@ test('passo 2: dados da festa, título padrão e dimensionamento', async () => {
   assert.equal(invalido.dados.erro, 'data_invalida');
 
   const { status, dados } = await admin('PUT', '/api/setup/festa', {
-    corpo: { nome_destaque: '  Helena ', subtitulo: '45 anos', inicio_em: '2026-12-05T20:00:00-03:00', duracao_horas: 4, local: 'Salão', convidados: 60 },
+    corpo: { nome_destaque: '  Helena ', subtitulo: '45 anos', inicio_em: '2026-12-05T20:00:00-03:00', duracao_horas: 4, local: 'Salão', contato: ' festa@exemplo.com ', convidados: 60 },
   });
   assert.equal(status, 200);
   assert.equal(dados.festa.nome_destaque, 'Helena');
   assert.equal(dados.festa.titulo, 'Karaokê da Helena');
   assert.equal(dados.festa.duracao_min, 240);
+  assert.equal(dados.festa.contato, 'festa@exemplo.com');
+  assert.equal((await (await fetch(base + '/api/festa')).json()).contato, 'festa@exemplo.com');
   assert.equal(dados.festa.admin_pin_hash, undefined);
   assert.deepEqual(dados.dimensionamento, { musicas: 48, convidados: 60, aviso_duas_vezes: true });
 });

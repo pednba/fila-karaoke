@@ -263,7 +263,7 @@ function renderFesta() {
   const st = s.estado.status;
   const f = s.festa;
   const itens = [
-    ['festa', 'Dados da festa', 'Nome, título, data, duração, local e convidados'],
+    ['festa', 'Dados da festa', 'Nome, título, data, duração, local, contato e convidados'],
     ['visual', 'Visual', 'Arte, tema, cor de destaque e fonte'],
     ['catalogo', 'Catálogo', 'Reimportar a lista de músicas do aparelho'],
     ['regras', 'Regras', 'Pedidos por pessoa, pulos, votação, VIP'],

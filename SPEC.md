@@ -61,7 +61,8 @@ fila-karaoke/
     pdf-lista-aparelho.js   porte em JS de pdf_lista_aparelho.py
     pdf_lista_aparelho.py   implementação de referência (Python)
   scripts/reset_festa.js, arquivar_festa.js
-  public/               index.html, admin.html, setup.html, app.css, *.js
+  public/               index.html, admin.html, setup.html, privacidade.html, app.css, *.js
+    fontes/             fontes da interface (woff2) e licença OFL
   data/                 banco, uploads e catálogos (fora do git)
   test/
   docs/design/          referência visual
@@ -82,6 +83,7 @@ fila-karaoke/
    - Subtítulo opcional (ex.: "45 anos", "Formatura 2026").
    - Data e hora de início, duração em horas.
    - Local (opcional, texto livre).
+   - Contato de quem organiza (opcional, texto livre até 120 caracteres: e-mail ou telefone). Aparece na página de privacidade (7.1).
    - Número estimado de convidados.
 3. **Visual**
    - Arte da festa: upload JPG/PNG/WebP até 5 MB (o convite, por exemplo). Aparece na tela de entrada dos convidados e no topo do ranking final. Redimensionar no servidor para no máximo 1200 px de largura.
@@ -168,6 +170,7 @@ CREATE TABLE festa (
   inicio_em    TEXT,                -- ISO 8601 com fuso
   duracao_min  INTEGER NOT NULL DEFAULT 240,
   local        TEXT NOT NULL DEFAULT '',
+  contato      TEXT NOT NULL DEFAULT '',  -- de quem organiza (7.1)
   convidados   INTEGER NOT NULL DEFAULT 30,
   arte_arquivo TEXT,                -- caminho em data/uploads
   tema         TEXT NOT NULL,       -- JSON: preset + tokens finais (seção 11)
@@ -230,6 +233,16 @@ CREATE TABLE meta (chave TEXT PRIMARY KEY, valor TEXT);  -- versao, ultimo_canto
 - **Admin:** `POST /api/admin/login {pin}` compara com o hash e grava cookie `adm` assinado com `COOKIE_SECRET`. Máximo de 5 tentativas por minuto por IP.
 - **Setup inicial:** rotas `/api/setup/*` aceitam o cabeçalho `X-Setup-Token` enquanto não existe PIN; depois disso, só cookie de admin.
 - Risco aceito: limpar cookie ou usar aba anônima cria outra pessoa (outro voto, outra cota de pedidos).
+
+### 7.1 Privacidade
+- Só cookies essenciais (`kid` e `adm`), sem rastreamento, anúncios nem pedidos a terceiros: fontes e imagens saem do próprio servidor (11). Por isso não há banner de consentimento.
+- **Tela de entrada:** junto do campo de nome, o texto "Usamos um cookie só para lembrar quem você é nesta festa. Sem rastreamento." com o link "Privacidade" para `/privacidade`.
+- **Página `/privacidade`:** genérica, com o título e o tema da festa. Diz:
+  - o que é guardado: o nome escolhido, os pedidos, as notas dadas, o e-mail (só se a pessoa deixar, 9.1) e, nos registros técnicos do servidor, endereço IP e horário dos acessos;
+  - para quê: montar a fila, a votação e o ranking desta festa; os registros técnicos servem só para manter o site no ar e evitar abuso;
+  - quem vê: todos na festa veem nomes, músicas pedidas e rankings; quem organiza vê também os pedidos de cada pessoa, mas não vê e-mails nem as notas individuais;
+  - por quanto tempo: o cookie vale até 24 h depois do fim da festa; o e-mail é apagado depois do envio do ranking; ao arquivar, uma cópia do banco (sem e-mails) fica guardada só com quem organiza;
+  - quem responde pelos dados: quem organiza a festa, com o contato do passo 2 quando preenchido.
 
 ## 8. Regras da fila
 
@@ -295,7 +308,7 @@ JSON. Erros: `{ "erro": "codigo", "mensagem": "texto para a tela" }`.
 ### 10.2 Público
 | Rota | Corpo | Resposta |
 |---|---|---|
-| `GET /api/festa` | | dados públicos: status, título, nome em destaque, subtítulo, data, local, url da arte, tema, regras visíveis |
+| `GET /api/festa` | | dados públicos: status, título, nome em destaque, subtítulo, data, local, contato, url da arte, tema, regras visíveis |
 | `GET /api/festa/arte` | | a imagem |
 | `POST /api/pessoas` | `{nome}` | `201` + cookie; `409 nome_em_uso`; `403 festa_fechada` |
 | `GET /api/estado` | | `{versao, me: {nome, vip, email}, atual, proximos[10], total_fila, meus_pedidos[], votacoes[], limite}`; `atual.liberado_em` (ISO ou `null`) diz a partir de quando o convidado do cookie, se não for o dono, pode marcar Cantou (8.4) |
@@ -367,6 +380,7 @@ Presets:
 - A cor de destaque escolhida pelo admin substitui `--decor` e `--destaque-palco`. Validar contraste: `--texto-2` sobre `--fundo` ≥ 4.5:1; `--destaque-palco` sobre `--palco` ≥ 4.5:1.
 - Motivo decorativo: linha fina em `--decor` com um ícone pequeno no meio (coração no Dourado clássico; o preset define o ícone).
 - Fonte base: Montserrat em todos os presets. Rótulos em caixa alta com `letter-spacing: 0.2em`.
+- As fontes são servidas pelo próprio app (`public/fontes/`, licença OFL), nunca pelo Google Fonts ou outra CDN (7.1).
 - Alvos de toque ≥ 44 px; inputs com `font-size: 16px`.
 
 ## 12. Telas
@@ -374,7 +388,7 @@ Presets:
 Referência visual: `docs/design/` (formato do protótipo; ver o LEIA-ME de lá).
 
 ### Convidado (`/`)
-- **Entrada:** arte da festa (se houver), nome em destaque e subtítulo dentro do círculo decorativo, campo de nome, "Entrar na festa".
+- **Entrada:** arte da festa (se houver), nome em destaque e subtítulo dentro do círculo decorativo, campo de nome com o aviso de cookie (7.1), "Entrar na festa".
 - **Cabeçalho:** título curto + nome do convidado.
 - **Menu inferior:** Fila · Catálogo · Pedidos (n) · Ranking.
 - **Fila:** "Agora no palco" (título, artista, código grande, cantor); "Cantou?" quando é a vez do usuário; "Fulano já terminou?" (com confirmação) quando `atual.liberado_em` já passou; cartões de voto (atual e anterior); "Próximos 10" com o usuário destacado.
@@ -382,6 +396,7 @@ Referência visual: `docs/design/` (formato do protótipo; ver o LEIA-ME de lá)
 - **Pedidos:** posição, espera estimada, cancelar, "Já cantei".
 - **Ranking:** Pessoas / Performances.
 - **Festa em preparação** (rascunho) e **Festa encerrada** (ranking final + agradecimento).
+- **Privacidade** (`/privacidade`): o texto de 7.1, acessível sem entrar na festa.
 
 ### Admin (`/admin`)
 - Sem PIN configurado: assistente de setup (seção 4).
@@ -424,4 +439,5 @@ Ver `README.md`. Variáveis de ambiente (`.env.example`): `PORT`, `PUBLIC_URL`, 
 - Polling em vez de WebSocket.
 - Máquina de karaokê recebe só o código da vez, nunca a fila (10.5).
 - Nome único por festa.
+- Só cookies essenciais e nenhum serviço de terceiros no navegador; transparência pela página de privacidade em vez de banner (7.1).
 - Catálogos reais não vão para o repositório (seção 5; ver README).

@@ -87,7 +87,7 @@ function montarEntrada() {
         <span class="erro-campo" id="erro-nome" hidden></span>
       </div>
       <button type="submit" class="btn btn-grande">Entrar na festa</button>
-      <p class="sec">Seu nome fica salvo neste celular.</p>
+      <p class="sec">Usamos um cookie só para lembrar quem você é nesta festa. Sem rastreamento. <a href="/privacidade">Privacidade</a></p>
     </form>`;
   $('#form-entrada').onsubmit = async (ev) => {
     ev.preventDefault();

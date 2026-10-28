@@ -56,7 +56,7 @@ test('busca acha o artista por qualquer grafia', () => {
 test('migração recalcula a coluna busca de um catálogo antigo', () => {
   const db = bancoCom([{ cod: '1', titulo: 'Pai', artista: 'Fábio Jr.' }]);
   db.prepare("UPDATE musicas SET busca = 'pai fabio jr. 1'").run(); // como era antes
-  db.exec('ALTER TABLE pessoas DROP COLUMN email'); // volta ao schema da versão 2
+  db.exec('ALTER TABLE pessoas DROP COLUMN email; ALTER TABLE festa DROP COLUMN contato'); // volta ao schema da versão 2
   db.pragma('user_version = 2');
   migrar(db);
   assert.equal(db.prepare('SELECT busca FROM musicas').pluck().get(), 'pai fabio junior 1');

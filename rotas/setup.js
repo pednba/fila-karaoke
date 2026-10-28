@@ -74,7 +74,7 @@ export function rotasSetup({ db, config, auth }) {
     escrever(db, () =>
       db
         .prepare(`UPDATE festa SET nome_destaque = @nome_destaque, titulo = @titulo, subtitulo = @subtitulo, inicio_em = @inicio_em,
-                  duracao_min = @duracao_min, local = @local, convidados = @convidados, atualizado_em = datetime('now') WHERE id = 1`)
+                  duracao_min = @duracao_min, local = @local, contato = @contato, convidados = @convidados, atualizado_em = datetime('now') WHERE id = 1`)
         .run(d)
     );
     const festa = lerFesta(db);

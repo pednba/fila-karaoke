@@ -53,6 +53,7 @@ export function validarDadosFesta(corpo) {
   const titulo = texto(corpo.titulo, 'titulo', 'o título', 80) || `Karaokê da ${nome_destaque}`;
   const subtitulo = texto(corpo.subtitulo, 'subtitulo', 'o subtítulo', 60);
   const local = texto(corpo.local, 'local', 'o local', 120);
+  const contato = texto(corpo.contato, 'contato', 'o contato', 120);
 
   const inicio_em = String(corpo.inicio_em ?? '').trim();
   if (!ISO_COM_FUSO.test(inicio_em) || Number.isNaN(Date.parse(inicio_em))) {
@@ -66,7 +67,7 @@ export function validarDadosFesta(corpo) {
   if (!Number.isInteger(convidados) || convidados < 1 || convidados > 1000) {
     throw erro(422, 'convidados_invalido', 'Informe o número estimado de convidados (1 a 1000).', { campo: 'convidados' });
   }
-  return { nome_destaque, titulo, subtitulo, inicio_em, duracao_min: Math.round(horas * 60), local, convidados };
+  return { nome_destaque, titulo, subtitulo, inicio_em, duracao_min: Math.round(horas * 60), local, contato, convidados };
 }
 
 // Passo 5. Aceita só as chaves conhecidas, mescla com as atuais.

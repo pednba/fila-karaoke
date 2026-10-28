@@ -85,6 +85,10 @@ const MIGRACOES = [
   `
   ALTER TABLE pessoas ADD COLUMN email TEXT;
   `,
+  // Contato de quem organiza, na página de privacidade (SPEC 7.1).
+  `
+  ALTER TABLE festa ADD COLUMN contato TEXT NOT NULL DEFAULT '';
+  `,
 ];
 
 export function migrar(db) {

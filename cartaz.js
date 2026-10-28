@@ -1,5 +1,5 @@
 // Cartaz A4 para imprimir: arte, título e QR code (SPEC 4.2, passo 6).
-import { cssDoTema, urlFontes } from './temas.js';
+import { cssDoTema, URL_FONTES } from './temas.js';
 
 export function escapar(s) {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -14,7 +14,7 @@ export function renderizarCartaz({ festa, link, qrSvg }) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cartaz · ${escapar(festa.titulo)}</title>
-<link rel="stylesheet" href="${urlFontes(tema.fonte)}">
+<link rel="stylesheet" href="${URL_FONTES}">
 <style>
 ${cssDoTema(tema)}
 @page { size: A4; margin: 0; }

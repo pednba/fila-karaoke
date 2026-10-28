@@ -146,7 +146,7 @@ function blocoRank(titulo, itens, tipo, n) {
   return `
     <section class="t-ranking" aria-label="${titulo}">
       <div class="t-cabeca"><h2>${titulo}</h2><span class="t-sec">${tipo === 'pessoas' ? 'média' : 'nota'}</span></div>
-      ${itens.slice(0, n).map((r, i) => linhaRank(r, i, tipo)).join('')}
+      <div data-cortar>${itens.slice(0, n).map((r, i) => linhaRank(r, i, tipo)).join('')}</div>
     </section>`;
 }
 
@@ -156,8 +156,9 @@ function ranking() {
   const blocos = pessoas.length
     ? blocoRank('Ranking · Pessoas', pessoas, 'pessoas', 5) + blocoRank('Ranking · Performances', performances, 'performances', 5)
     : blocoRank('Ranking · Performances', performances, 'performances', 8);
+  // O QR vem logo depois e nunca sai da tela: o ranking ocupa o que sobrar e cortar() esconde o excesso.
   return `
-    ${blocos || '<section class="t-ranking"><div class="t-cabeca"><h2>Ranking</h2></div><p class="t-vazio">O ranking aparece quando a primeira votação fechar.</p></section>'}
+    <div class="t-rankings">${blocos || '<section class="t-ranking"><div class="t-cabeca"><h2>Ranking</h2></div><p class="t-vazio">O ranking aparece quando a primeira votação fechar.</p></section>'}</div>
     ${votacoes}`;
 }
 

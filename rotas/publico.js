@@ -287,6 +287,7 @@ export function estadoPublico(db, pessoa) {
     })
     .sort((a, b) => (a.posicao ?? Infinity) - (b.posicao ?? Infinity) || a.id - b.id);
   const ativos = meus.filter((p) => p.status !== 'cantou').length;
+  const ultimo = fila.reduce((a, p) => (!a || p.id > a.id ? p : a), null);
 
   return {
     versao: lerVersao(db),
@@ -295,6 +296,8 @@ export function estadoPublico(db, pessoa) {
     atual: naVez ? { ...pedidoPublico(naVez, me), liberado_em: liberadoEm(naVez, me, fila) } : null,
     proximos: fila.slice(0, PROXIMOS).map((p) => pedidoPublico(p, me)),
     total_fila: fila.length,
+    // O pedido mais recente da fila, com a posição real: o telão o mostra mesmo fora dos que cabem (SPEC 12).
+    ultimo_pedido: ultimo ? { ...pedidoPublico(ultimo, me), posicao: ordem.get(ultimo.id) } : null,
     meus_pedidos,
     votacoes: festa.regras.votacao ? votacoesAbertas(db, me) : [],
     limite: { maximo: festa.regras.pendentes_por_pessoa, ativos },

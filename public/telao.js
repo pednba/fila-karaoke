@@ -83,13 +83,17 @@ function palco() {
 }
 
 // Uma linha por cantor; quantos couberem (cortar() esconde os que passariam da tela).
+// O pedido mais recente fecha a lista com a posição real, para quem acabou de pedir se ver no telão.
 function proximos() {
-  const itens = s.estado.proximos.map((p, i) => `
-    <div class="t-item">
-      <span class="t-num">${i + 1}</span>
+  const linha = (p, n, extra = '') => `
+    <div class="t-item" data-id="${p.id}" ${extra}>
+      <span class="t-num">${n}</span>
       <span class="t-item-nome t-cortar">${esc(p.cantor)}</span>
       <span class="t-item-musica t-cortar">${esc(p.titulo)}</span>
-    </div>`).join('');
+    </div>`;
+  const ultimo = s.estado.ultimo_pedido;
+  const itens = s.estado.proximos.map((p, i) => linha(p, i + 1)).join('')
+    + (ultimo ? linha(ultimo, ultimo.posicao, 'data-fixo') : '');
   return `
     <section class="t-coluna t-lista" aria-label="Próximos cantores">
       <div class="t-cabeca"><h2>Próximos</h2></div>
@@ -115,15 +119,23 @@ function baixo() {
 }
 
 // Esconde os itens que não cabem inteiros na altura disponível.
+// Um item data-fixo só aparece se o mesmo pedido ficou escondido, e aí toma o lugar do último visível.
 function cortar() {
   for (const lista of app.querySelectorAll('[data-cortar]')) {
     const limite = lista.getBoundingClientRect().bottom;
+    const fixo = lista.querySelector('[data-fixo]');
+    const itens = [...lista.children].filter((item) => item !== fixo);
     let cabe = true;
     for (const item of lista.children) item.hidden = false;
-    for (const item of lista.children) {
+    if (fixo) fixo.hidden = true;
+    for (const item of itens) {
       cabe = cabe && item.getBoundingClientRect().bottom <= limite + 1;
       item.hidden = !cabe;
     }
+    if (!fixo || itens.some((item) => !item.hidden && item.dataset.id === fixo.dataset.id)) continue;
+    fixo.hidden = false;
+    const visiveis = itens.filter((item) => !item.hidden);
+    while (visiveis.length && fixo.getBoundingClientRect().bottom > limite + 1) visiveis.pop().hidden = true;
   }
 }
 addEventListener('resize', cortar);

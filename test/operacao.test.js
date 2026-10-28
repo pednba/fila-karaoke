@@ -162,6 +162,7 @@ test('pedir: fila vazia vai direto ao palco; validações', async () => {
   assert.equal(e.atual.meu, true);
   assert.deepEqual(e.proximos.map((p) => [p.cantor, p.cod]), [['Bia', '1005'], ['Ana', '1002'], ['Ana', '1003']]);
   assert.equal(e.total_fila, 3);
+  assert.deepEqual([e.ultimo_pedido.cantor, e.ultimo_pedido.cod, e.ultimo_pedido.posicao], ['Ana', '1003', 3]);
   assert.deepEqual(e.limite, { maximo: 3, ativos: 3 });
   assert.deepEqual(e.meus_pedidos.map((p) => [p.cod, p.posicao, p.espera_min]), [['1001', 0, null], ['1002', 2, 10], ['1003', 3, 15]]);
   assert.equal((await caio.chamar('GET', '/api/musicas?q=1001')).dados.musicas[0].na_fila, false);

@@ -13,10 +13,20 @@ export const naTelaDeInicio = () => matchMedia('(display-mode: standalone)').mat
 
 const paraBytes = (b64) => Uint8Array.from(atob(b64.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
 
+let pediu = false;
+
 // Precisa ser chamado direto no toque (antes de qualquer await), senão o navegador ignora.
 export function pedirPermissao(chave) {
   if (!suportaPush(chave) || Notification.permission !== 'default') return Promise.resolve(suportaPush(chave) ? Notification.permission : 'indisponivel');
+  pediu = true;
   return Notification.requestPermission();
+}
+
+// A permissão pode ser dada fora do app (sininho na barra do Chrome, configurações do site).
+export function vigiarPermissao(aoMudar) {
+  navigator.permissions?.query({ name: 'notifications' })
+    .then((estado) => { estado.onchange = aoMudar; })
+    .catch(() => {});
 }
 
 export async function inscrever(chave) {
@@ -29,10 +39,14 @@ export async function inscrever(chave) {
   return true;
 }
 
-// Qual cartão mostrar na aba Fila: 'ativar', 'iphone' ou null.
+// Qual cartão mostrar na aba Fila: 'ativar', 'sininho', 'bloqueado', 'iphone' ou null.
 export function cartaoDesejado(chave) {
   if (!chave || guardado(DISPENSADO)) return null;
-  if (suportaPush(chave)) return Notification.permission === 'default' ? 'ativar' : null;
+  if (suportaPush(chave)) {
+    if (Notification.permission === 'denied') return 'bloqueado';
+    if (Notification.permission === 'default') return pediu ? 'sininho' : 'ativar';
+    return null;
+  }
   return ehIphone() && !naTelaDeInicio() ? 'iphone' : null;
 }
 

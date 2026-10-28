@@ -1,7 +1,7 @@
 // Tela do convidado (SPEC 12): entrada, Fila, Catálogo, Pedidos, Ranking, preparação e encerrada.
 import { $, esc, api, vigiar, avisar, icone, filete, definirIcone, plural, dividirTitulo, MICROFONE, LUPA } from './comum.js';
 import {
-  pedirPermissao, inscrever, cartaoDesejado, dispensar, entrarPeloToken, prepararTelaDeInicio, avisoNovo, marcarVisto,
+  pedirPermissao, vigiarPermissao, inscrever, cartaoDesejado, dispensar, entrarPeloToken, prepararTelaDeInicio, avisoNovo, marcarVisto,
 } from './avisos.js';
 
 const app = $('#app');
@@ -293,16 +293,20 @@ function cartaoAvisos() {
   const tipo = cartaoDesejado(s.festa.push_chave);
   if (!tipo) return '';
   if (tipo === 'iphone') prepararTelaDeInicio();
-  const texto = tipo === 'iphone'
-    ? 'No iPhone, os avisos só chegam com o app na Tela de Início: toque em Compartilhar e depois em <strong>Adicionar à Tela de Início</strong>. Abra por lá e permita as notificações.'
-    : 'Receba um aviso quando sua música for a próxima e os recados da festa, como a hora do parabéns.';
+  const texto = {
+    iphone: 'No iPhone, os avisos só chegam com o app na Tela de Início: toque em Compartilhar e depois em <strong>Adicionar à Tela de Início</strong>. Abra por lá e permita as notificações.',
+    ativar: 'Receba um aviso quando sua música for a próxima e os recados da festa, como a hora do parabéns.',
+    sininho: 'Se o navegador mostrou um <strong>sininho na barra de endereço</strong>, toque nele e escolha <strong>Permitir</strong>.',
+    bloqueado: 'As notificações estão bloqueadas para este site. Para receber os avisos, toque no ícone à esquerda do endereço, depois em <strong>Permissões</strong> e libere as <strong>Notificações</strong>.',
+  }[tipo];
+  const pode = tipo === 'ativar' || tipo === 'sininho';
   return `
     <section class="cartao-decor pilha" style="gap: 10px;" aria-label="Avisos">
       <span class="titulo-item">Avisos no celular</span>
       <span class="sec" style="font-size: 14px; line-height: 1.4;">${texto}</span>
       <div class="linha" style="display: flex; gap: 8px; flex-wrap: wrap;">
-        ${tipo === 'ativar' ? '<button type="button" class="btn btn-pequeno" data-acao="ativar-avisos">Ativar avisos</button>' : ''}
-        <button type="button" class="btn btn-claro btn-pequeno" data-acao="dispensar-avisos">${tipo === 'ativar' ? 'Agora não' : 'Entendi'}</button>
+        ${pode ? `<button type="button" class="btn btn-pequeno" data-acao="ativar-avisos">${tipo === 'sininho' ? 'Tentar de novo' : 'Ativar avisos'}</button>` : ''}
+        <button type="button" class="btn btn-claro btn-pequeno" data-acao="dispensar-avisos">${pode ? 'Agora não' : 'Entendi'}</button>
       </div>
     </section>`;
 }
@@ -860,7 +864,6 @@ async function aoClicar(ev) {
     } else if (acao === 'ativar-avisos') {
       const permissao = await pedirPermissao(s.festa.push_chave);
       if (permissao === 'granted' && await inscrever(s.festa.push_chave)) avisar('Pronto! Você vai receber os avisos.');
-      else if (permissao === 'denied') avisar('As notificações estão bloqueadas nas configurações do navegador.');
       return renderFila();
     } else if (acao === 'dispensar-avisos') {
       dispensar();
@@ -882,6 +885,10 @@ async function aoClicar(ev) {
 
 try {
   await entrarPeloToken();
+  vigiarPermissao(async () => {
+    if (s.aba === 'fila') renderFila();
+    if (await inscrever(s.festa?.push_chave).catch(() => false)) avisar('Pronto! Você vai receber os avisos.');
+  });
   await carregarFesta();
   poll = vigiar('/api/estado', aoEstado, { aoErro: () => {} });
 } catch (e) {

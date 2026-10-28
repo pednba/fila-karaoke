@@ -22,7 +22,7 @@ test('montarEmailRanking traz a colocação da pessoa e os rankings', () => {
   const performances = [{ cantor: 'Bia', titulo: 'Evidências', artista: 'Chitãozinho & Xororó', nota: 10 }];
   const festa = { titulo: 'Festa Teste', nome_destaque: 'Teste' };
   const e = montarEmailRanking({ festa, link: 'https://k.exemplo/', nome: 'Ana', pessoas, performances });
-  assert.equal(e.assunto, 'Ranking final · Festa Teste');
+  assert.equal(e.assunto, 'Ranking final · Teste', 'o nome em destaque, não o título, que pode ser uma frase');
   assert.match(e.texto, /Você ficou em 2º lugar/);
   assert.match(e.texto, /1\. Bia · Evidências/);
   assert.match(e.html, /Chitãozinho &amp; Xororó/);

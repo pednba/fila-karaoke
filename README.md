@@ -40,6 +40,8 @@ A fonte da verdade é a [`SPEC.md`](SPEC.md). Este README resume o que existe e 
 | Ranking | De performances e de pessoas, com mínimos configuráveis | 9 |
 | Prêmio por Pix | Opcional: com a chave Pix de quem organiza, a aba Ranking convida a contribuir para o prêmio de quem ganhar. O app não confere pagamentos | 9.2 |
 | Ranking por e-mail | Opcional, com SMTP: quem deixar o e-mail recebe o ranking final, e o endereço é apagado depois | 9.1 |
+| Avisos no celular | Opcional, por Web Push: aviso quando a música da pessoa é a próxima e as mensagens de quem organiza. No iPhone, pela Tela de Início | 9.3 |
+| Recado para o telão | Na aba Fila, até 100 caracteres com emojis; aparece só no telão, com o nome de quem mandou | 9.4 |
 | Privacidade | Aviso de cookie na entrada e página `/privacidade`. Só cookies essenciais, nada de terceiros no navegador (as fontes saem do próprio servidor), por isso sem banner de consentimento | 7.1 |
 
 ### Para quem organiza (`/admin`)
@@ -53,7 +55,8 @@ A fonte da verdade é a [`SPEC.md`](SPEC.md). Este README resume o que existe e 
 | Ciclo de vida | Rascunho → aberta → encerrada (ranking final) → arquivada (backup do banco e festa nova) | 4.3 |
 | Máquina | Estado da conexão e "Reenviar código", quando a integração está ligada | 10.5 |
 | Telão | `/festa`: fila, ranking, recados dos convidados e QR code de entrada numa TV, só leitura | 12 |
-| Recados | Convidados mandam recados (com emojis) que aparecem só no telão; o admin apaga | 9.4 |
+| Mensagem para os convidados | Até 200 caracteres com emojis: notificação para quem ativou os avisos, janela no app e faixa no telão por 15 minutos | 9.3 |
+| Recados no telão | Os 10 mais recentes dos convidados, com "Apagar" | 9.4 |
 
 ### Regras da fila em uma frase
 
@@ -99,6 +102,7 @@ cartaz.js               cartaz A4 com arte e QR
 email.js                ranking final por e-mail (SMTP opcional)
 maquina.js              comando da vez para o script da máquina
 recados.js              recados dos convidados para o telão
+push.js                 avisos por Web Push (node:crypto, VAPID)
 erros.js                formato de erro da API
 rotas/
   publico.js            convidado: entrada, estado, catálogo, pedidos, votos, ranking
@@ -112,7 +116,8 @@ importadores/
   csv.js                CSV com , ou ;
 public/
   index.html, convidado.js   tela do convidado
-  festa.html, telao.js       telão (fila e ranking na TV)
+  avisos.js, sw.js           permissão, inscrição e service worker dos avisos
+  festa.html, telao.js, .css telão (fila, ranking e recados na TV)
   admin.html, admin.js       painel do admin
   setup.html, setup.js       assistente de setup
   privacidade.html, .js      página de privacidade
@@ -245,7 +250,7 @@ npm test        # node:test
 - **Visual:** a referência é `docs/design/`. O CSS final está em `public/estilo.css`, com o tema em variáveis.
 - **Banco:** as migrações ficam em `db.js`. Nunca edite uma migração publicada; acrescente uma nova no fim.
 - **Importador de PDF:** o `.js` é porte do `.py`. Altere os dois juntos.
-- **Testes:** cobrem fila, votos, importadores, setup, operação, temas, e-mail, máquina e partes do front.
+- **Testes:** cobrem fila, votos, importadores, setup, operação, temas, e-mail, avisos, recados, máquina e partes do front.
 - **Textos:** a interface é toda em português do Brasil.
 
 ## Em evolução
@@ -264,7 +269,6 @@ Pontos conhecidos e ideias em aberto. O que estiver fora da SPEC precisa de deci
   - várias festas simultâneas;
   - contas de usuário;
   - duetos;
-  - modo telão;
   - renomear ou mesclar pessoas;
   - pedido fora do catálogo;
   - WebSocket/SSE;

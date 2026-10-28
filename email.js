@@ -91,7 +91,7 @@ ${festa.tema?.fonte || base.fonte ? `@font-face { font-family: '${festa.tema?.fo
 ${arte}
 <div style="text-align: center; padding-top: 8px;">
   <div style="font-family: ${fonteDestaque}; font-size: 56px; line-height: 1.1; color: ${t.texto};">Obrigado!</div>
-  <p style="font-size: 14px; color: ${t['texto-2']}; margin: 8px 0 0;">Oi, ${escHtml(nome)}! A festa <strong style="color: ${t.texto};">${escHtml(festa.titulo || festa.nome_destaque)}</strong> terminou. Aqui está o ranking final.</p>
+  <p style="font-size: 14px; color: ${t['texto-2']}; margin: 8px 0 0;">Oi, ${escHtml(nome)}! A festa <strong style="color: ${t.texto};">${escHtml(festa.nome_destaque || festa.titulo)}</strong> terminou. Aqui está o ranking final.</p>
 </div>
 ${destaque ? `<div style="margin-top: 18px; padding: 16px; border-radius: 16px; background: ${t.palco}; color: ${t['texto-palco']}; text-align: center; font-size: 15px;"><strong style="color: ${t['destaque-palco']};">${escHtml(destaque)}</strong></div>` : ''}
 ${secoes}
@@ -107,7 +107,7 @@ ${rodapeExtra ? pe(rodapeExtra) : ''}
 
 // Função pura: monta assunto, texto e HTML para uma pessoa.
 export function montarEmailRanking({ festa, link, nome, pessoas, performances, rodapeExtra = '' }) {
-  const titulo = festa.titulo || festa.nome_destaque;
+  const titulo = festa.nome_destaque || festa.titulo; // o título pode ser uma frase; o nome cabe em "A festa X terminou"
   const minha = pessoas?.find((p) => p.nome === nome);
   const linhasPessoas = (pessoas ?? []).slice(0, TOPO).map((p, i) => `${i + 1}. ${p.nome} · média ${formatarNota(p.media)}`);
   const linhasPerformances = performances.slice(0, TOPO).map((p, i) => `${i + 1}. ${p.cantor} · ${p.titulo} (${p.artista}) · nota ${formatarNota(p.nota)}`);

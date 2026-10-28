@@ -104,6 +104,14 @@ test('listarArtistas separa parcerias, ignora nomes cortados e soma grafias', ()
     { nome: 'Zezé', chave: 'zeze', total: 1 },
   ]);
   assert.deepEqual(listarArtistas(db, { filtro: 'internacionais' }).map((a) => a.nome), ['ABBA']);
+
+  // Com gênero, só as músicas cujo artista principal é daquele gênero (SPEC 5.7).
+  db.prepare("INSERT INTO generos_artista (chave, genero, confianca, origem) VALUES ('fabio junior', 'MPB', 'alta', 'teste'), ('zeze', 'Sertanejo', 'alta', 'teste')").run();
+  assert.deepEqual(listarArtistas(db, { genero: 'MPB' }), [
+    { nome: 'Fábio Jr.', chave: 'fabio junior', total: 3 },
+    { nome: 'Zezé', chave: 'zeze', total: 1 }, // participa de uma música de MPB
+  ]);
+  assert.deepEqual(listarArtistas(db, { genero: 'Sertanejo' }), []);
 });
 
 test('sugerir: nada antes de cantar; depois, outra do mesmo artista que ela não pediu', () => {

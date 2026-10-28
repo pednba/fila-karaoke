@@ -12,7 +12,7 @@ const s = {
     q: '', filtro: '', modo: 'musicas', artista: null, // artista: { nome, chave }
     genero: '', generos: {}, // generos: cache por filtro (SPEC 5.7)
     musicas: [], total: 0, carregando: false, geracao: 0,
-    artistas: {}, mostrarArtistas: PASSO_ARTISTAS, // artistas: cache por filtro
+    artistas: {}, mostrarArtistas: PASSO_ARTISTAS, // artistas: cache por filtro e gênero
     sugestao: null, sugestaoChave: null,
   },
   ranking: { tipo: null, lista: [], versao: null, pessoasVazio: false },
@@ -188,16 +188,15 @@ function montarFesta() {
     if (!b) return;
     s.busca.filtro = b.dataset.filtro;
     if (s.busca.modo === 'artistas') carregarArtistas();
-    else {
-      buscar();
-      carregarGeneros();
-    }
+    else buscar();
+    carregarGeneros();
   };
   $('#generos').onclick = (ev) => {
     const b = ev.target.closest('[data-genero]');
     if (!b || b.dataset.genero === s.busca.genero) return;
     s.busca.genero = b.dataset.genero;
-    buscar();
+    if (s.busca.modo === 'artistas') carregarArtistas();
+    else buscar();
   };
   // Rolagem infinita: quando o fim da lista aparece, carrega a próxima página.
   new IntersectionObserver((vistos) => {
@@ -371,7 +370,8 @@ async function carregarGeneros() {
   if (b.filtro !== filtro) return;
   if (b.genero && !b.generos[filtro].some((g) => g.nome === b.genero)) {
     b.genero = '';
-    buscar();
+    if (b.modo === 'artistas') carregarArtistas();
+    else buscar();
   }
   renderGeneros();
 }
@@ -380,7 +380,7 @@ function renderGeneros() {
   const b = s.busca;
   const alvo = $('#generos');
   const lista = b.generos[b.filtro] ?? [];
-  alvo.hidden = !s.festa.filtro_genero || b.modo !== 'musicas' || !lista.length;
+  alvo.hidden = !s.festa.filtro_genero || !lista.length;
   if (alvo.hidden) return;
   alvo.innerHTML = [{ nome: '' }, ...lista]
     .map((g) => `<button type="button" class="pilula" data-genero="${esc(g.nome)}" aria-pressed="${g.nome === b.genero}">${g.nome ? esc(g.nome) : 'Todos os gêneros'}</button>`)
@@ -389,17 +389,24 @@ function renderGeneros() {
 
 async function carregarArtistas() {
   const b = s.busca;
-  const filtro = b.filtro;
+  const chave = chaveArtistas();
   b.mostrarArtistas = PASSO_ARTISTAS;
-  if (!b.artistas[filtro]) {
+  if (!b.artistas[chave]) {
     renderBusca();
     try {
-      b.artistas[filtro] = (await api('GET', `/api/artistas?filtro=${filtro}`)).artistas;
+      const params = new URLSearchParams({ filtro: b.filtro });
+      if (b.genero) params.set('genero', b.genero);
+      b.artistas[chave] = (await api('GET', `/api/artistas?${params}`)).artistas;
     } catch (e) {
       return avisar(e.message);
     }
   }
-  if (s.aba === 'busca' && b.modo === 'artistas' && b.filtro === filtro) renderBusca();
+  if (s.aba === 'busca' && b.modo === 'artistas' && chaveArtistas() === chave) renderBusca();
+}
+
+// A lista de artistas muda com o idioma e com o gênero (SPEC 5.7).
+function chaveArtistas() {
+  return `${s.busca.filtro}|${s.busca.genero}`;
 }
 
 function carregarMais() {
@@ -422,7 +429,6 @@ function trocarModo(modo, artista = null) {
   const b = s.busca;
   b.modo = modo;
   b.artista = artista;
-  if (artista) b.genero = '';
   b.q = '';
   $('#busca').value = '';
   $('#busca').placeholder = modo === 'artistas' ? 'Nome do artista' : 'Música, artista ou trecho da letra';
@@ -443,7 +449,7 @@ function simplificar(texto) {
 }
 
 function artistasFiltrados() {
-  const lista = s.busca.artistas[s.busca.filtro] ?? [];
+  const lista = s.busca.artistas[chaveArtistas()] ?? [];
   const termo = simplificar(s.busca.q);
   if (!termo) return lista;
   return lista.filter((a) => a.chave.includes(termo) || simplificar(a.nome).includes(termo));
@@ -518,7 +524,7 @@ function renderBusca() {
 function renderArtistas() {
   const b = s.busca;
   const fim = $('#mais-busca');
-  const carregada = b.artistas[b.filtro];
+  const carregada = b.artistas[chaveArtistas()];
   if (!carregada) {
     $('#resultado-busca').innerHTML = '<span class="sec">Carregando artistas…</span>';
     fim.hidden = true;

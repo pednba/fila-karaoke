@@ -146,7 +146,9 @@ export function rotasPublicas({ db, config, auth, email }) {
   r.get('/artistas', (req, res) => {
     const filtro = String(req.query.filtro ?? '');
     if (!['', 'nacionais', 'internacionais'].includes(filtro)) throw erro(422, 'filtro_invalido', 'Filtro inválido.');
-    res.json({ artistas: listarArtistas(db, { filtro }) });
+    const genero = lerFesta(db).filtro_genero ? String(req.query.genero ?? '') : ''; // SPEC 5.7
+    if (genero && !GENEROS.includes(genero)) throw erro(422, 'genero_invalido', 'Gênero inválido.');
+    res.json({ artistas: listarArtistas(db, { filtro, genero }) });
   });
 
   r.get('/generos', (req, res) => {

@@ -168,6 +168,7 @@ test('rotas de gênero: exigem token, classificam, ligam o filtro e apagam', asy
   // Desligado: nada de gênero para o convidado.
   assert.deepEqual((await api('GET', '/api/generos')).dados, { generos: [] });
   assert.equal((await api('GET', '/api/musicas?genero=MPB')).dados.total, 6);
+  assert.deepEqual((await api('GET', '/api/artistas?genero=MPB')).dados, (await api('GET', '/api/artistas')).dados);
   assert.equal((await api('GET', '/api/festa')).dados.filtro_genero, false);
 
   assert.equal((await api('PUT', '/api/setup/generos', { ativo: 'sim' })).status, 422);
@@ -177,6 +178,8 @@ test('rotas de gênero: exigem token, classificam, ligam o filtro e apagam', asy
   const mpb = await api('GET', '/api/musicas?genero=MPB');
   assert.deepEqual(mpb.dados.musicas.map((m) => m.cod), ['4']);
   assert.equal((await api('GET', '/api/musicas?genero=Jazz')).status, 422);
+  assert.ok((await api('GET', '/api/artistas?genero=MPB')).dados.artistas.length < (await api('GET', '/api/artistas')).dados.artistas.length);
+  assert.equal((await api('GET', '/api/artistas?genero=Jazz')).status, 422);
 
   const apagado = await api('DELETE', '/api/setup/generos');
   assert.equal(apagado.dados.ativo, false);

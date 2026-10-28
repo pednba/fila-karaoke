@@ -23,9 +23,11 @@ export function artistaPrincipal(artista) {
 }
 
 // Lista A–Z: [{ nome, chave, total }]. O nome exibido é a grafia mais frequente.
-export function listarArtistas(db, { filtro = '' } = {}) {
+// Com gênero, conta só as músicas daquele gênero, que vem do artista principal (SPEC 5.7).
+export function listarArtistas(db, { filtro = '', genero = '' } = {}) {
   const idioma = filtro === 'nacionais' ? "AND idioma = 'BRA'" : filtro === 'internacionais' ? "AND idioma <> 'BRA'" : '';
-  const linhas = db.prepare(`SELECT artista, COUNT(*) AS n FROM musicas WHERE fora_do_catalogo = 0 ${idioma} GROUP BY artista`).all();
+  const doGenero = genero ? 'AND artista_principal(artista) IN (SELECT chave FROM generos_artista WHERE genero = @genero)' : '';
+  const linhas = db.prepare(`SELECT artista, COUNT(*) AS n FROM musicas WHERE fora_do_catalogo = 0 ${idioma} ${doGenero} GROUP BY artista`).all(genero ? { genero } : {});
   const porChave = new Map();
   for (const { artista, n } of linhas) {
     for (const nome of new Set(participantes(artista))) {

@@ -168,7 +168,8 @@ O PDF não traz gênero. No passo 4, depois de importar o catálogo, quem organi
 - **Categorias fixas:** MPB, Sertanejo, Samba/Pagode, Forró/Piseiro, Axé, Funk, Brega/Arrocha, Pop Nacional, Rock Nacional, Gospel, Infantil, Pop Internacional, Rock Internacional, Latino, Reggae, Outros. Para cada artista o modelo devolve uma categoria e a confiança (alta, média ou baixa), ou diz que não conhece o artista: aí ele fica sem gênero e não é perguntado de novo.
 - **Resultado mostrado antes de ligar:** cobertura (% das músicas com gênero), artistas e músicas por confiança, músicas por gênero, amostra dos artistas de confiança baixa com mais músicas e a **precisão estimada**: média, ponderada pelo número de músicas, de 95% (alta), 75% (média) e 50% (baixa). A tela diz que é uma estimativa a partir da confiança declarada pelo modelo, não uma conferência.
 - **Ligar é decisão de quem organiza:** o filtro (`filtro_genero`) começa desligado e pode ser ligado ou desligado a qualquer momento; também dá para apagar a classificação.
-- **No catálogo do convidado,** com o filtro ligado, no modo Músicas aparece uma linha de chips com os gêneros que têm músicas (respeitando o filtro Nacionais/Internacionais), em ordem de quantidade, com "Todos os gêneros" primeiro. Combina com a busca, o idioma e o artista. Música sem gênero só aparece em "Todos os gêneros".
+- **No catálogo do convidado,** com o filtro ligado, nos modos Músicas e Artistas aparece uma linha de chips com os gêneros que têm músicas (respeitando o filtro Nacionais/Internacionais), em ordem de quantidade, com "Todos os gêneros" primeiro. Combina com a busca, o idioma e o artista. Música sem gênero só aparece em "Todos os gêneros".
+- **No modo Artistas,** com um gênero escolhido, a lista mostra só os artistas que participam de alguma música daquele gênero, com o total dessas músicas. Tocar no artista mantém o gênero, então as músicas mostradas batem com o total; "Todos os gêneros" mostra todas as dele.
 - **Classificação pronta:** `node scripts/importar-generos.js <arquivo.csv>` grava uma classificação feita fora do app (CSV `artista;genero;confianca`, cabeçalho opcional, colunas a mais ignoradas). Linha com categoria ou confiança fora da lista é ignorada e contada.
 
 ## 6. Modelo de dados
@@ -344,7 +345,7 @@ JSON. Erros: `{ "erro": "codigo", "mensagem": "texto para a tela" }`.
 | `GET /api/estado` | | `{versao, me: {nome, vip, email}, atual, proximos[10], total_fila, meus_pedidos[], votacoes[], limite}`; `atual.liberado_em` (ISO ou `null`) diz a partir de quando o convidado do cookie, se não for o dono, pode marcar Cantou (8.4) |
 | `GET /api/musicas?q=&filtro=&artista=&genero=&offset=` | | página de até 20 + `total` + `offset` (5.4, 5.5, 5.7); `genero` fora da lista dá `422 genero_invalido` e é ignorado com o filtro de gênero desligado |
 | `GET /api/generos?filtro=` | | `{generos: [{nome, total}]}` em ordem de quantidade; lista vazia com o filtro de gênero desligado (5.7) |
-| `GET /api/artistas?filtro=` | | `{artistas: [{nome, chave, total}]}` em ordem A–Z (5.5) |
+| `GET /api/artistas?filtro=&genero=` | | `{artistas: [{nome, chave, total}]}` em ordem A–Z (5.5); com `genero`, só as músicas daquele gênero (5.7), com as mesmas regras de `genero` de `/api/musicas` |
 | `PUT /api/me/email` | `{email}` | `200 {email}`; `email_invalido`, `email_desligado`, `festa_fechada` (9.1) |
 | `DELETE /api/me/email` | | `204` |
 | `GET /api/sugestao` | | `{sugestao: {musica, artista} \| null}` para o convidado do cookie (5.6) |

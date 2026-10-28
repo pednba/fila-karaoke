@@ -100,6 +100,10 @@ const MIGRACOES = [
     origem    TEXT NOT NULL
   );
   `,
+  // Envio para a máquina ligado por quem organiza (SPEC 10.5).
+  `
+  ALTER TABLE festa ADD COLUMN maquina_ativa INTEGER NOT NULL DEFAULT 0;
+  `,
 ];
 
 export function migrar(db) {

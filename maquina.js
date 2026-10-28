@@ -8,10 +8,13 @@ import { lerFesta } from './festa.js';
 import { pedidoNaVez } from './operacao.js';
 
 const CONECTADA_MS = 30_000;
+const DESLIGADA = () => erro(404, 'maquina_desligada', 'A integração com a máquina não está ligada.');
 
 // O comando muda quando outro pedido vira na_vez (ou o mesmo volta, com outro na_vez_em) e a cada reenvio.
+// Com o envio desligado não há comando: o script só espera.
 export function comandoAtual(db) {
-  if (lerFesta(db).status !== 'aberta') return null;
+  const festa = lerFesta(db);
+  if (festa.status !== 'aberta' || !festa.maquina_ativa) return null;
   const p = pedidoNaVez(db);
   if (!p) return null;
   const reenvio = Number(lerMeta(db, 'maquina_reenvio') ?? 0);
@@ -25,7 +28,7 @@ export function criarMaquina({ db, token, agora = () => Date.now() }) {
 
   const rotas = express.Router();
   rotas.use((req, res, next) => {
-    if (!token) return next(erro(404, 'maquina_desligada', 'A integração com a máquina não está ligada.'));
+    if (!token) return next(DESLIGADA());
     const enviado = req.get('X-Maquina-Token');
     if (!enviado || !iguais(enviado, token)) return next(erro(401, 'token_invalido', 'Token da máquina inválido.'));
     next();
@@ -43,11 +46,17 @@ export function criarMaquina({ db, token, agora = () => Date.now() }) {
     status() {
       if (!token) return null;
       const comando = comandoAtual(db);
-      return { conectada: agora() - visto < CONECTADA_MS, enviado: Boolean(comando && feito === comando.id) };
+      return { ativa: Boolean(lerFesta(db).maquina_ativa), conectada: agora() - visto < CONECTADA_MS, enviado: Boolean(comando && feito === comando.id) };
     },
-    // Roda dentro de `escrever`.
+    // Os dois rodam dentro de `escrever`.
+    ligar(ativa) {
+      if (!token) throw DESLIGADA();
+      if (typeof ativa !== 'boolean') throw erro(422, 'valor_invalido', 'Informe se o envio para a máquina fica ligado.');
+      db.prepare("UPDATE festa SET maquina_ativa = ?, atualizado_em = datetime('now') WHERE id = 1").run(ativa ? 1 : 0);
+    },
     reenviar() {
-      if (!token) throw erro(404, 'maquina_desligada', 'A integração com a máquina não está ligada.');
+      if (!token) throw DESLIGADA();
+      if (!lerFesta(db).maquina_ativa) throw erro(409, 'maquina_pausada', 'O envio para a máquina está desligado.');
       if (!comandoAtual(db)) throw erro(409, 'palco_vazio', 'Não há ninguém no palco.');
       gravarMeta(db, 'maquina_reenvio', Number(lerMeta(db, 'maquina_reenvio') ?? 0) + 1);
     },

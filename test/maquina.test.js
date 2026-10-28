@@ -19,7 +19,7 @@ function festaAberta() {
   garantirFesta(db);
   const musicas = ['1001', '1002'].map((cod) => ({ cod, titulo: `M${cod}`, artista: 'X', inicio: '', idioma: 'BRA' }));
   gravarCatalogo(db, { musicas: prepararMusicas(musicas), origem: 'teste', statusFesta: 'rascunho' });
-  db.prepare("UPDATE festa SET status = 'aberta', admin_pin_hash = ? WHERE id = 1").run(hashPin('1234'));
+  db.prepare("UPDATE festa SET status = 'aberta', maquina_ativa = 1, admin_pin_hash = ? WHERE id = 1").run(hashPin('1234'));
   for (const nome of ['Ana', 'Bia']) db.prepare('INSERT INTO pessoas (id, nome, nome_norm) VALUES (?, ?, ?)').run(nome, nome, nome.toLowerCase());
   return db;
 }
@@ -49,7 +49,7 @@ test('status: conectada por 30 s depois da consulta; enviado quando o feito é o
   escrever(db, () => pedir(db, { pessoa_id: 'Ana', musica_cod: '1001' }));
   let agora = 1_000_000;
   const maquina = criarMaquina({ db, token: TOKEN, agora: () => agora });
-  assert.deepEqual(maquina.status(), { conectada: false, enviado: false });
+  assert.deepEqual(maquina.status(), { ativa: true, conectada: false, enviado: false });
   assert.equal(criarMaquina({ db, token: null }).status(), null);
 
   const handler = maquina.rotas.stack.at(-1).route.stack[0].handle;
@@ -59,11 +59,11 @@ test('status: conectada por 30 s depois da consulta; enviado quando o feito é o
     return corpo.comando;
   };
   const { id } = consultar(undefined);
-  assert.deepEqual(maquina.status(), { conectada: true, enviado: false });
+  assert.deepEqual(maquina.status(), { ativa: true, conectada: true, enviado: false });
   consultar(id);
-  assert.deepEqual(maquina.status(), { conectada: true, enviado: true });
+  assert.deepEqual(maquina.status(), { ativa: true, conectada: true, enviado: true });
   agora += 30_000;
-  assert.deepEqual(maquina.status(), { conectada: false, enviado: true });
+  assert.deepEqual(maquina.status(), { ativa: true, conectada: false, enviado: true });
 });
 
 async function subir(config) {
@@ -106,13 +106,13 @@ test('rotas: token obrigatório, comando, reenviar e estado no admin', async () 
     const { comando } = (await chamar('GET', '/api/maquina/comando', comToken)).dados;
     assert.equal(comando.cod, '1001');
     let adm = await chamar('GET', '/api/admin/estado');
-    assert.deepEqual(adm.dados.maquina, { conectada: true, enviado: false });
+    assert.deepEqual(adm.dados.maquina, { ativa: true, conectada: true, enviado: false });
 
     await chamar('GET', `/api/maquina/comando?feito=${encodeURIComponent(comando.id)}`, comToken);
     const etag = adm.etag;
     adm = await chamar('GET', '/api/admin/estado', { headers: { 'If-None-Match': etag } });
     assert.equal(adm.status, 200, 'o ETag muda quando a máquina confirma');
-    assert.deepEqual(adm.dados.maquina, { conectada: true, enviado: true });
+    assert.deepEqual(adm.dados.maquina, { ativa: true, conectada: true, enviado: true });
 
     assert.equal((await chamar('POST', '/api/admin/maquina/reenviar')).status, 200);
     const novo = (await chamar('GET', '/api/maquina/comando', comToken)).dados.comando;
@@ -133,4 +133,38 @@ test('sem MAQUINA_TOKEN: rotas desligadas e admin sem máquina', async () => {
   } finally {
     servidor.close();
   }
+});
+
+test('envio desligado: sem comando, sem reenviar; liga pelo admin e pelo setup', async () => {
+  const { db, servidor, chamar } = await subir({ maquinaToken: TOKEN });
+  const comToken = { headers: { 'X-Maquina-Token': TOKEN } };
+  try {
+    db.prepare('UPDATE festa SET maquina_ativa = 0').run();
+    escrever(db, () => pedir(db, { pessoa_id: 'Ana', musica_cod: '1001' }));
+    assert.deepEqual((await chamar('GET', '/api/maquina/comando', comToken)).dados, { comando: null });
+
+    await chamar('POST', '/api/admin/login', { corpo: { pin: '1234' } }); // com PIN, o setup usa o cookie do admin
+    assert.deepEqual((await chamar('GET', '/api/setup')).dados.maquina, { ativa: false });
+    assert.deepEqual((await chamar('GET', '/api/admin/estado')).dados.maquina, { ativa: false, conectada: true, enviado: false });
+    assert.equal((await chamar('POST', '/api/admin/maquina/reenviar')).dados.erro, 'maquina_pausada');
+    assert.equal((await chamar('PUT', '/api/admin/maquina', { corpo: { ativa: 'sim' } })).status, 422);
+
+    assert.equal((await chamar('PUT', '/api/admin/maquina', { corpo: { ativa: true } })).dados.maquina.ativa, true);
+    assert.equal((await chamar('GET', '/api/maquina/comando', comToken)).dados.comando.cod, '1001');
+
+    assert.deepEqual((await chamar('PUT', '/api/setup/maquina', { corpo: { ativa: false } })).dados, { maquina: { ativa: false } });
+    assert.deepEqual((await chamar('GET', '/api/maquina/comando', comToken)).dados, { comando: null });
+  } finally {
+    servidor.close();
+  }
+});
+
+test('festa nova começa com o envio desligado', () => {
+  const db = abrirBanco(':memory:');
+  garantirFesta(db);
+  escrever(db, () => criarMaquina({ db, token: TOKEN }).ligar(true));
+  assert.equal(db.prepare('SELECT maquina_ativa FROM festa').pluck().get(), 1);
+  db.exec('DELETE FROM festa');
+  garantirFesta(db);
+  assert.equal(db.prepare('SELECT maquina_ativa FROM festa').pluck().get(), 0);
 });

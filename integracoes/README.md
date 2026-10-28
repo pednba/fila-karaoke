@@ -13,7 +13,7 @@ O script só faz consultas de saída (`GET /api/maquina/comando`). Não precisa 
 
 1. Gere um token: `openssl rand -hex 24`.
 2. Ponha no `.env` do app: `MAQUINA_TOKEN=<token>`.
-3. Reinicie o app. No admin aparecem o estado da máquina e o botão "Reenviar código" (com a máquina ainda desconectada).
+3. Reinicie o app. No admin aparecem o estado da máquina e o botão "Ligar envio" (com a máquina ainda desconectada). O envio começa desligado: o script consulta, mas não recebe código até alguém ligar.
 
 ## 2. No celular que fica ao lado da máquina (Android)
 
@@ -102,6 +102,7 @@ python maquina_ir.py rodar
 
 - O script guarda o último comando em `ultimo_comando.txt`. Ao reiniciar, não manda de novo a música que já mandou.
 - Sem internet ou com o emissor fora do ar, ele tenta de novo a cada 5 segundos.
+- Ligue o envio no admin ("Ligar envio") ou no setup, passo 5, só depois de testar com `testar`. "Desligar envio" para tudo na hora, sem parar o script.
 - No admin: "Máquina conectada · código enviado" mostra que deu certo. "Desconectada" quer dizer que o script parou de consultar há mais de 30 segundos.
 - **"Reenviar código"** no admin manda de novo a música da vez (para quando o sinal não pegou).
 - **Plano B:** o código da vez aparece grande no palco do admin. Digite no controle da máquina.

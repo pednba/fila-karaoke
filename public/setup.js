@@ -670,7 +670,23 @@ function passoRegras() {
         : `<label class="numero" data-regra="${chave}"><span>${nome}</span><input type="number" name="${chave}" min="1" step="1" inputmode="numeric" value="${regras[chave]}"></label>`).join('')}
       <span class="erro-campo erro-form" hidden></span>
       <button type="submit" class="btn btn-grande" style="margin-top: 8px;">Salvar e continuar</button>
-    </form>`;
+    </form>
+    ${s.setup.maquina ? `
+      <section class="cartao pilha" style="margin-top: 12px;">
+        <h3 class="rotulo" style="font-size: 12px;">Máquina de karaokê</h3>
+        <label class="interruptor"><span>Enviar códigos para a máquina</span><input type="checkbox" id="maquina-ativa" ${s.setup.maquina.ativa ? 'checked' : ''}></label>
+        <span class="sec" style="font-size: 13px; line-height: 1.4;">Deixe desligado até testar com a máquina. Desligado, o script do controle não manda nada e o código da vez aparece no admin para digitar no controle. Dá para ligar e desligar também no admin, durante a festa.</span>
+      </section>` : ''}`;
+  $('#maquina-ativa')?.addEventListener('change', async (ev) => {
+    const ativa = ev.target.checked;
+    try {
+      s.setup.maquina = (await api('PUT', '/api/setup/maquina', { ativa })).maquina;
+      avisar(ativa ? 'Envio para a máquina ligado.' : 'Envio para a máquina desligado.');
+    } catch (e) {
+      ev.target.checked = !ativa;
+      avisar(e.message);
+    }
+  });
   const form = $('#form');
   const sincronizar = () => {
     const votacao = form.elements.votacao.checked;
@@ -723,6 +739,7 @@ function passoPublicar() {
         <tr><td>Votação</td><td>${r.votacao ? `ligada · mínimo de ${plural(r.minimo_votos, 'voto', 'votos')}` : 'desligada'}</td></tr>
         ${r.votacao ? `<tr><td>Ranking de pessoas</td><td>${r.ranking_pessoas ? `ligado · mínimo de ${plural(r.minimo_performances, 'performance', 'performances')}` : 'desligado'}</td></tr>` : ''}
         <tr><td>VIP</td><td>${r.vip ? 'disponível' : 'desligado'}</td></tr>
+        ${st.maquina ? `<tr><td>Envio para a máquina</td><td>${st.maquina.ativa ? 'ligado' : 'desligado'}</td></tr>` : ''}
         <tr><td>Capacidade</td><td>~${plural(st.dimensionamento.musicas, 'música', 'músicas')}</td></tr>
       </table>
     </section>

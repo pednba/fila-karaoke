@@ -29,10 +29,15 @@ export function rotasAdmin({ db, auth, maquina }) {
   // Mesmo polling do convidado: ETag pela versão e, com a máquina ligada, pelo estado dela (SPEC 10.5).
   r.get('/estado', (req, res) => {
     const m = maquina?.status() ?? null;
-    const etag = `"${lerVersao(db)}-adm${m ? `-${Number(m.conectada)}${Number(m.enviado)}` : ''}"`;
+    const etag = `"${lerVersao(db)}-adm${m ? `-${Number(m.ativa)}${Number(m.conectada)}${Number(m.enviado)}` : ''}"`;
     res.set({ ETag: etag, 'Cache-Control': 'no-cache' });
     if (req.get('If-None-Match') === etag) return res.status(304).end();
     res.json({ ...estadoAdmin(db), maquina: m });
+  });
+
+  r.put('/maquina', (req, res) => {
+    escrever(db, () => maquina.ligar(req.body?.ativa));
+    res.json({ maquina: maquina.status() });
   });
 
   r.post('/maquina/reenviar', (req, res) => {

@@ -302,12 +302,17 @@ function renderFesta() {
 // Máquina de karaokê (SPEC 10.5): só aparece com MAQUINA_TOKEN no servidor.
 function linhaMaquina(m, fechada) {
   if (!m) return '';
-  const texto = !m.conectada ? 'Máquina desconectada: digite o código no controle'
+  const conexao = m.conectada ? 'Máquina conectada' : 'Máquina desconectada';
+  const texto = !m.ativa ? `Envio para a máquina desligado · ${conexao.toLowerCase()}`
+    : !m.conectada ? 'Máquina desconectada: digite o código no controle'
     : m.enviado ? 'Máquina conectada · código enviado' : 'Máquina conectada · enviando código…';
   return `
-      <div class="entre" style="gap: 8px; padding-top: 4px;">
+      <div class="entre" style="gap: 8px; padding-top: 4px; flex-wrap: wrap;">
         <span class="sub" style="font-size: 12px;" role="status">${texto}</span>
-        <button type="button" class="btn btn-palco-claro btn-pequeno" data-acao="reenviar" ${fechada ? 'disabled' : ''}>Reenviar código</button>
+        <div class="linha" style="gap: 6px;">
+          ${m.ativa ? `<button type="button" class="btn btn-palco-claro btn-pequeno" data-acao="reenviar" ${fechada ? 'disabled' : ''}>Reenviar código</button>` : ''}
+          <button type="button" class="btn btn-palco-claro btn-pequeno" data-acao="maquina" data-ativa="${!m.ativa}">${m.ativa ? 'Desligar envio' : 'Ligar envio'}</button>
+        </div>
       </div>`;
 }
 
@@ -321,6 +326,11 @@ async function aoClicar(ev) {
     if (acao === 'cantou') {
       await api('POST', '/api/admin/cantou');
       avisar(`${a.cantor} cantou. Fila avançou.`, { baixo: true });
+    } else if (acao === 'maquina') {
+      const ativa = b.dataset.ativa === 'true';
+      if (ativa && a && !confirm(`Ligar o envio? O código ${a.cod} (${a.cantor}) vai para a máquina agora, se ainda não foi.`)) return;
+      await api('PUT', '/api/admin/maquina', { ativa });
+      avisar(ativa ? 'Envio para a máquina ligado.' : 'Envio para a máquina desligado. Digite os códigos no controle.', { baixo: true });
     } else if (acao === 'reenviar') {
       await api('POST', '/api/admin/maquina/reenviar');
       avisar(`Código ${a.cod} reenviado para a máquina.`, { baixo: true });

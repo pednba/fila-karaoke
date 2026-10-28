@@ -31,7 +31,7 @@ export function dadosFesta(festa) {
 // multer grava originalname como latin1.
 const nomeOriginal = (arquivo) => Buffer.from(arquivo.originalname, 'latin1').toString('utf8');
 
-export function rotasSetup({ db, config, auth }) {
+export function rotasSetup({ db, config, auth, maquina }) {
   const r = express.Router();
   const pastaUploads = path.join(config.dataDir, 'uploads');
   const pastaTmp = path.join(pastaUploads, 'tmp');
@@ -55,7 +55,14 @@ export function rotasSetup({ db, config, auth }) {
       link: link(),
       presets: Object.entries(PRESETS).map(([id, p]) => ({ id, nome: p.nome, fonte: p.fonte, icone: p.icone, tokens: p.tokens })),
       fontes: FONTES,
+      maquina: maquina.ativa ? { ativa: Boolean(festa.maquina_ativa) } : null,
     });
+  });
+
+  // Passo 5: envio para a máquina (SPEC 10.5).
+  r.put('/maquina', (req, res) => {
+    escrever(db, () => maquina.ligar(req.body?.ativa));
+    res.json({ maquina: { ativa: Boolean(lerFesta(db).maquina_ativa) } });
   });
 
   // Passo 1. Ao criar (ou trocar) o PIN, o navegador já fica logado como admin.

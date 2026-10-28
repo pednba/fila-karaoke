@@ -185,6 +185,7 @@ CREATE TABLE festa (
   contato      TEXT NOT NULL DEFAULT '',  -- de quem organiza (7.1)
   pix          TEXT NOT NULL DEFAULT '',  -- chave Pix de quem organiza (9.2)
   filtro_genero INTEGER NOT NULL DEFAULT 0, -- 1 = chips de gênero no catálogo (5.7)
+  maquina_ativa INTEGER NOT NULL DEFAULT 0, -- 1 = envia o código da vez para a máquina (10.5)
   convidados   INTEGER NOT NULL DEFAULT 30,
   arte_arquivo TEXT,                -- caminho em data/uploads
   tema         TEXT NOT NULL,       -- JSON: preset + tokens finais (seção 11)
@@ -373,10 +374,11 @@ JSON. Erros: `{ "erro": "codigo", "mensagem": "texto para a tela" }`.
 ### 10.5 Máquina de karaokê (opcional)
 Um script fora do app (`integracoes/`) roda num aparelho ao lado da máquina e manda o código por infravermelho (Broadlink ou controle universal Tuya). Liga com `MAQUINA_TOKEN` no `.env` (pelo menos 16 caracteres); sem ele, as rotas respondem `404 maquina_desligada` e o admin não mostra nada da máquina.
 
+- **Envio ligado por quem organiza:** mesmo com o token, o envio começa desligado (`festa.maquina_ativa = 0`, também numa festa nova depois de arquivar). Desligado, `GET /api/maquina/comando` devolve `{comando: null}` e o script fica só esperando; a conexão continua aparecendo no admin. Liga e desliga a qualquer momento no admin (`PUT /api/admin/maquina {ativa}`) e no setup, passo 5 (`PUT /api/setup/maquina {ativa}`); `GET /api/setup` traz `maquina: {ativa} | null` (`null` sem token). Ao ligar com alguém no palco, o código da vez sai na hora, a menos que o script já o tenha enviado antes. `ativa` não booleano: `422 valor_invalido`.
 - A máquina recebe **só o pedido `na_vez`**: ela nunca guarda fila própria. Cada vez que um pedido vira `na_vez`, nasce um comando novo `{id, cod}`. O `id` muda também quando o admin pede "Reenviar código".
 - `GET /api/maquina/comando?feito=<id>` com o cabeçalho `X-Maquina-Token`: devolve `{comando: {id, cod, titulo, cantor} | null}` (`null` sem `na_vez` ou com a festa fora de `aberta`). `feito` é o último comando que o script já mandou; token errado: `401 token_invalido`.
 - O script guarda o último `id` feito num arquivo e só manda o código quando o `id` muda; ao reiniciar, não repete.
-- Admin: indicador "Máquina conectada" (o script consultou nos últimos 30 segundos), "Código enviado" ou "Enviando…" (o `feito` informado é o comando atual) e o botão "Reenviar código" (`POST /api/admin/maquina/reenviar`, incrementa `meta.maquina_reenvio`).
+- Admin: indicador "Máquina conectada" (o script consultou nos últimos 30 segundos), "Código enviado" ou "Enviando…" (o `feito` informado é o comando atual) e o botão "Reenviar código" (`POST /api/admin/maquina/reenviar`, incrementa `meta.maquina_reenvio`; com o envio desligado, `409 maquina_pausada`). Com o envio desligado, o admin mostra "Envio para a máquina desligado" e o botão "Ligar envio"; ligado, "Desligar envio".
 - Plano B: o operador digita no controle o código grande mostrado no palco.
 
 ## 11. Visual e temas

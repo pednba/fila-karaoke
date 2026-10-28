@@ -40,7 +40,9 @@ async function carregarRanking() {
 async function carregarRecados() {
   if (!s.festa.regras.recados || s.recados.versao === s.estado.versao) return;
   try {
+    const primeira = s.recados.versao === null;
     s.recados = { versao: s.estado.versao, lista: (await api('GET', '/api/recados')).recados };
+    if (primeira) for (const m of s.recados.lista) recadosVistos.set(m.id, 0); // os de antes de abrir não são novos
   } catch {
     // fica a lista anterior; tenta de novo na próxima mudança
   }
@@ -122,9 +124,23 @@ function novoPedido() {
   return `<span class="t-novo t-cortar ${entra}"><span class="t-novo-nome">${esc(anuncio.cantor)}</span> acabou de pedir</span>`;
 }
 
+// Recado que chega com o telão aberto fica com o fundo de realce por 2 minutos (os de antes de abrir, não).
+const RECADO_NOVO_MS = 2 * 60 * 1000;
+const recadosVistos = new Map();
+let recadosTimer = null;
+function recadoNovo(m) {
+  if (!recadosVistos.has(m.id)) {
+    recadosVistos.set(m.id, Date.now());
+    clearTimeout(recadosTimer);
+    recadosTimer = setTimeout(render, RECADO_NOVO_MS + 500);
+  }
+  const em = recadosVistos.get(m.id);
+  return em && Date.now() - em < RECADO_NOVO_MS;
+}
+
 function recados() {
   const itens = s.recados.lista.map((m) => `
-    <div class="t-recado">
+    <div class="t-recado ${recadoNovo(m) ? 't-recente' : ''}">
       <span class="t-recado-nome t-cortar">${esc(m.nome)}</span>
       <span class="t-recado-texto">${esc(m.texto)}</span>
     </div>`).join('');

@@ -6,6 +6,8 @@ body.telao { font-size: 1rem; height: 100vh; overflow: hidden; cursor: none; }
 .t-sec { color: var(--texto-2); font-size: 1em; }
 .t-rotulo { font-size: 0.8em; font-weight: 600; letter-spacing: 0.24em; text-transform: uppercase; }
 .t-cortar { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Fontes manuscritas passam da caixa (hastes e voltas): folga por dentro, compensada por fora, para o corte não comer a letra. */
+.destaque.t-cortar { padding: 0.2em 0.25em 0.2em 0.1em; margin: -0.2em -0.25em -0.2em -0.1em; }
 .telao .filete { gap: 0.6em; }
 .telao .filete .icone { width: 0.9em; height: 0.9em; }
 

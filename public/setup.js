@@ -454,7 +454,9 @@ function passoCatalogo() {
         </div>` : '<span class="erro-campo erro-form" hidden></span>'}
       ${!p && catalogo.total ? '<button type="button" class="btn btn-grande" id="seguir">Continuar</button>' : ''}
     </form>
-    ${!p && catalogo.total ? '<section class="pilha" id="generos" style="margin-top: 12px;"></section>' : ''}`;
+    ${!p && catalogo.total ? '<section class="pilha" id="generos" style="margin-top: 12px;"></section>' : ''}
+    ${secaoMaquina()}`;
+  ligarMaquina();
   if (!p && catalogo.total) {
     if (s.classificando) renderGeneros();
     else carregarGeneros();
@@ -642,6 +644,30 @@ async function classificarGeneros() {
   else if (!s.generos.pendentes) avisar('Pronto! Confira o resultado e decida se liga o filtro.');
 }
 
+// Máquina de karaokê (SPEC 10.5): fica no passo do catálogo, junto do que vai para o aparelho.
+function secaoMaquina() {
+  if (!s.setup.maquina) return '';
+  return `
+    <section class="cartao pilha" style="margin-top: 12px;">
+      <h3 class="rotulo" style="font-size: 12px;">Máquina de karaokê</h3>
+      <label class="interruptor"><span>Enviar códigos para a máquina</span><input type="checkbox" id="maquina-ativa" ${s.setup.maquina.ativa ? 'checked' : ''}></label>
+      <span class="sec" style="font-size: 13px; line-height: 1.4;">Deixe desligado até testar com a máquina. Desligado, o script do controle não manda nada e o código da vez aparece no admin para digitar no controle. Dá para ligar e desligar também no admin, durante a festa.</span>
+    </section>`;
+}
+
+function ligarMaquina() {
+  $('#maquina-ativa')?.addEventListener('change', async (ev) => {
+    const ativa = ev.target.checked;
+    try {
+      s.setup.maquina = (await api('PUT', '/api/setup/maquina', { ativa })).maquina;
+      avisar(ativa ? 'Envio para a máquina ligado.' : 'Envio para a máquina desligado.');
+    } catch (e) {
+      ev.target.checked = !ativa;
+      avisar(e.message);
+    }
+  });
+}
+
 // ---------- 5. Regras ----------
 
 const REGRAS = [
@@ -674,23 +700,7 @@ function passoRegras() {
         : `<label class="numero" data-regra="${chave}"><span>${nome}</span><input type="number" name="${chave}" min="1" step="1" inputmode="numeric" value="${regras[chave]}"></label>`).join('')}
       <span class="erro-campo erro-form" hidden></span>
       <button type="submit" class="btn btn-grande" style="margin-top: 8px;">Salvar e continuar</button>
-    </form>
-    ${s.setup.maquina ? `
-      <section class="cartao pilha" style="margin-top: 12px;">
-        <h3 class="rotulo" style="font-size: 12px;">Máquina de karaokê</h3>
-        <label class="interruptor"><span>Enviar códigos para a máquina</span><input type="checkbox" id="maquina-ativa" ${s.setup.maquina.ativa ? 'checked' : ''}></label>
-        <span class="sec" style="font-size: 13px; line-height: 1.4;">Deixe desligado até testar com a máquina. Desligado, o script do controle não manda nada e o código da vez aparece no admin para digitar no controle. Dá para ligar e desligar também no admin, durante a festa.</span>
-      </section>` : ''}`;
-  $('#maquina-ativa')?.addEventListener('change', async (ev) => {
-    const ativa = ev.target.checked;
-    try {
-      s.setup.maquina = (await api('PUT', '/api/setup/maquina', { ativa })).maquina;
-      avisar(ativa ? 'Envio para a máquina ligado.' : 'Envio para a máquina desligado.');
-    } catch (e) {
-      ev.target.checked = !ativa;
-      avisar(e.message);
-    }
-  });
+    </form>`;
   const form = $('#form');
   const sincronizar = () => {
     const votacao = form.elements.votacao.checked;

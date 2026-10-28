@@ -278,7 +278,7 @@ function renderFesta() {
   const itens = [
     ['festa', 'Dados da festa', 'Nome, título, data, duração, local, contato, Pix e convidados'],
     ['visual', 'Visual', 'Arte, tema, cor de destaque e fonte'],
-    ['catalogo', 'Catálogo', 'Reimportar a lista de músicas do aparelho e gênero musical'],
+    ['catalogo', 'Catálogo', 'Reimportar a lista de músicas do aparelho, gênero musical e envio para a máquina'],
     ['regras', 'Regras', 'Pedidos por pessoa, pulos, votação, VIP'],
     ['publicar', 'Link, QR code e cartaz', 'Material para imprimir e compartilhar'],
     ['pin', 'Trocar PIN', 'PIN de acesso a este painel'],

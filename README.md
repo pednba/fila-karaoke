@@ -223,7 +223,7 @@ Quando alguém vira a vez, um script num celular Android (Termux) ao lado da má
 
 - **Só o código da vez:** a máquina recebe apenas a música da vez, nunca a fila.
 - **Só conexões de saída:** o script consulta `GET /api/maquina/comando`, então não precisa de porta aberta nem de VPN.
-- **Envio desligado por padrão:** mesmo com o token e o script rodando, nada vai para a máquina até alguém ligar "Enviar códigos para a máquina" (setup, passo 5) ou "Ligar envio" (admin). Desligar volta ao plano B na hora.
+- **Envio desligado por padrão:** mesmo com o token e o script rodando, nada vai para a máquina até alguém ligar "Enviar códigos para a máquina" (setup, passo 4) ou "Ligar envio" (admin). Desligar volta ao plano B na hora.
 - **Acompanhamento no admin:** mostra "Máquina conectada · código enviado" e tem o botão "Reenviar código".
 - **Plano B:** o código da vez aparece grande no admin, para alguém digitar no controle.
 

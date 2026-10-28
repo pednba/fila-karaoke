@@ -328,7 +328,7 @@ JSON. Erros: `{ "erro": "codigo", "mensagem": "texto para a tela" }`.
 `POST /api/admin/login`, `GET /api/admin/estado`, `POST /api/admin/cantou`, `POST /api/admin/pular`, `POST /api/admin/pedidos/:id/mover {direcao}`, `PATCH /api/admin/pedidos/:id {bypass}`, `GET /api/admin/pessoas`, `PATCH /api/admin/pessoas/:id {vip}`, `POST /api/admin/pedidos {nome, musica_cod}`.
 
 ### 10.5 Máquina de karaokê (opcional)
-Um script fora do app (`integracoes/`) roda num aparelho ao lado da máquina e manda o código por infravermelho (Broadlink). Liga com `MAQUINA_TOKEN` no `.env` (pelo menos 16 caracteres); sem ele, as rotas respondem `404 maquina_desligada` e o admin não mostra nada da máquina.
+Um script fora do app (`integracoes/`) roda num aparelho ao lado da máquina e manda o código por infravermelho (Broadlink ou controle universal Tuya). Liga com `MAQUINA_TOKEN` no `.env` (pelo menos 16 caracteres); sem ele, as rotas respondem `404 maquina_desligada` e o admin não mostra nada da máquina.
 
 - A máquina recebe **só o pedido `na_vez`**: ela nunca guarda fila própria. Cada vez que um pedido vira `na_vez`, nasce um comando novo `{id, cod}`. O `id` muda também quando o admin pede "Reenviar código".
 - `GET /api/maquina/comando?feito=<id>` com o cabeçalho `X-Maquina-Token`: devolve `{comando: {id, cod, titulo, cantor} | null}` (`null` sem `na_vez` ou com a festa fora de `aberta`). `feito` é o último comando que o script já mandou; token errado: `401 token_invalido`.

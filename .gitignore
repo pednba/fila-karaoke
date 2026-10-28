@@ -14,3 +14,7 @@ integracoes/codigos.json
 integracoes/ultimo_comando.txt
 __pycache__/
 *.local.md
+integracoes/devices.json
+integracoes/tinytuya.json
+integracoes/tuya-raw.json
+integracoes/snapshot.json

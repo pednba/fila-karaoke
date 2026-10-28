@@ -144,11 +144,24 @@ function recadoNovo(m) {
   return em && Date.now() - em < RECADO_NOVO_MS;
 }
 
+// Hora do recado (hh:mm, 24 h) no fuso do início da festa ("…-03:00"); sem início, no fuso da TV.
+// criado_em vem do SQLite em UTC sem fuso: "2026-11-02 21:00:00".
+function horaRecado(criado_em) {
+  const d = new Date(criado_em.replace(' ', 'T') + 'Z');
+  if (Number.isNaN(d.getTime())) return '';
+  const fuso = /([+-])(\d{2}):(\d{2})$/.exec(s.festa.inicio_em || '');
+  if (!fuso) return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  const desloc = (fuso[1] === '-' ? -1 : 1) * (Number(fuso[2]) * 60 + Number(fuso[3]));
+  const l = new Date(d.getTime() + desloc * 60000);
+  return `${String(l.getUTCHours()).padStart(2, '0')}:${String(l.getUTCMinutes()).padStart(2, '0')}`;
+}
+
 function recados() {
   const itens = s.recados.lista.map((m) => `
     <div class="t-recado ${recadoNovo(m) ? 't-recente' : ''}">
       <span class="t-recado-nome t-cortar">${esc(m.nome)}</span>
       <span class="t-recado-texto">${esc(m.texto)}</span>
+      <span class="t-recado-hora">${horaRecado(m.criado_em)}</span>
     </div>`).join('');
   return `
     <section class="t-coluna t-lista" aria-label="Recados dos convidados">

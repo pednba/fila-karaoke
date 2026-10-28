@@ -95,9 +95,28 @@ function proximos() {
     + (s.estado.recentes || []).map((p) => linha(p, p.posicao, 'data-fixo')).join('');
   return `
     <section class="t-coluna t-lista" aria-label="Próximos cantores">
-      <div class="t-cabeca"><h2>Próximos</h2></div>
+      <div class="t-cabeca"><h2>Próximos</h2>${novoPedido()}</div>
       ${itens ? `<div class="t-proximos" data-cortar>${itens}</div>` : '<p class="t-vazio">Ninguém na fila ainda. Peça sua música pelo celular!</p>'}
     </section>`;
+}
+
+// "{nome} acabou de pedir" ao lado de Próximos por 2 minutos depois que o telão vê um pedido novo.
+// Ao abrir o telão, o pedido mais recente já existente não é anunciado.
+const ANUNCIO_MS = 2 * 60 * 1000;
+const anuncio = { id: undefined, cantor: '', em: 0, timer: null };
+function novoPedido() {
+  const novo = (s.estado.recentes || []).reduce((a, p) => (!a || p.id > a.id ? p : a), null);
+  if (!novo) return '';
+  if (anuncio.id === undefined) anuncio.id = novo.id;
+  if (novo.id > anuncio.id) {
+    Object.assign(anuncio, { id: novo.id, cantor: novo.cantor, em: Date.now() });
+    clearTimeout(anuncio.timer);
+    anuncio.timer = setTimeout(render, ANUNCIO_MS + 500);
+  }
+  if (!anuncio.em || Date.now() - anuncio.em > ANUNCIO_MS) return '';
+  // Só anima na primeira vez; o telão redesenha a cada mudança e o anúncio não deve piscar.
+  const entra = Date.now() - anuncio.em < 1000 ? 't-novo-entra' : '';
+  return `<span class="t-novo t-cortar ${entra}"><span class="t-novo-nome">${esc(anuncio.cantor)}</span> acabou de pedir</span>`;
 }
 
 function recados() {

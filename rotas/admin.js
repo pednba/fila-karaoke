@@ -8,6 +8,7 @@ import { lerFesta } from '../festa.js';
 import { normalizar } from '../texto.js';
 import { validarNome } from './publico.js';
 import { validarTextoAviso } from '../push.js';
+import { listarRecados, apagarRecado, RECADOS_ADMIN } from '../recados.js';
 import {
   pedidoNaVez, filaOrdenada, pedir, cantou, pular, moverPedido, marcarBypass, marcarVip, votacoesAbertas,
 } from '../operacao.js';
@@ -78,6 +79,12 @@ export function rotasAdmin({ db, auth, maquina, push }) {
     res.status(201).json({ aviso, inscricoes });
   });
 
+  // Moderação dos recados do telão (SPEC 9.4).
+  r.delete('/recados/:id', (req, res) => {
+    escrever(db, () => apagarRecado(db, idDe(req)));
+    res.status(204).end();
+  });
+
   r.get('/pessoas', (req, res) => {
     res.json({ pessoas: listarPessoas(db) });
   });
@@ -145,5 +152,6 @@ export function estadoAdmin(db) {
       inscritos: contar('SELECT COUNT(DISTINCT pessoa_id) FROM inscricoes_push'),
       ultimo: db.prepare('SELECT id, texto, criado_em FROM avisos ORDER BY id DESC LIMIT 1').get() ?? null,
     },
+    recados: listarRecados(db, RECADOS_ADMIN),
   };
 }

@@ -124,6 +124,15 @@ const MIGRACOES = [
   );
   ALTER TABLE pedidos ADD COLUMN avisado INTEGER NOT NULL DEFAULT 0;
   `,
+  // Recados dos convidados no telão (SPEC 9.4).
+  `
+  CREATE TABLE recados (
+    id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    pessoa_id TEXT NOT NULL REFERENCES pessoas(id) ON DELETE CASCADE,
+    texto     TEXT NOT NULL,
+    criado_em TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  `,
 ];
 
 export function migrar(db) {

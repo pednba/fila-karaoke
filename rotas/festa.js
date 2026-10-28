@@ -13,7 +13,7 @@ export function rotasFesta({ db, config, auth, email, push }) {
   // Dados públicos (SPEC 10.2).
   r.get('/', (req, res) => {
     const f = lerFesta(db);
-    const { pendentes_por_pessoa, minutos_por_musica, votacao, ranking_pessoas, minimo_votos, minimo_performances } = f.regras;
+    const { pendentes_por_pessoa, minutos_por_musica, votacao, ranking_pessoas, minimo_votos, minimo_performances, recados } = f.regras;
     res.json({
       status: f.status,
       titulo: f.titulo,
@@ -28,7 +28,7 @@ export function rotasFesta({ db, config, auth, email, push }) {
       filtro_genero: Boolean(f.filtro_genero), // chips de gênero no catálogo (SPEC 5.7)
       arte_url: f.arte_arquivo ? '/api/festa/arte' : null,
       tema: f.tema,
-      regras: { pendentes_por_pessoa, minutos_por_musica, votacao, ranking_pessoas, minimo_votos, minimo_performances },
+      regras: { pendentes_por_pessoa, minutos_por_musica, votacao, ranking_pessoas, minimo_votos, minimo_performances, recados },
       admin_configurado: Boolean(f.admin_pin_hash), // /admin decide entre login e setup
       email_ranking: Boolean(email?.ativo && votacao), // SPEC 9.1
       push_chave: push?.chavePublica ?? null, // avisos por notificação (SPEC 9.3)

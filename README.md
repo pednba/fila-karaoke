@@ -52,7 +52,8 @@ A fonte da verdade é a [`SPEC.md`](SPEC.md). Este README resume o que existe e 
 | Operação | Cantou, Pular ausente, mover ↑/↓, bypass da regra de duas seguidas, VIP, pedido para quem está sem celular | 8.4 |
 | Ciclo de vida | Rascunho → aberta → encerrada (ranking final) → arquivada (backup do banco e festa nova) | 4.3 |
 | Máquina | Estado da conexão e "Reenviar código", quando a integração está ligada | 10.5 |
-| Telão | `/festa`: fila, ranking e QR code de entrada numa TV, só leitura | 12 |
+| Telão | `/festa`: fila, ranking, recados dos convidados e QR code de entrada numa TV, só leitura | 12 |
+| Recados | Convidados mandam recados (com emojis) que aparecem só no telão; o admin apaga | 9.4 |
 
 ### Regras da fila em uma frase
 
@@ -92,11 +93,12 @@ auth.js                 PIN, cookie do admin, SETUP_TOKEN
 catalogo.js             gravação do catálogo importado
 artistas.js             navegação por artista e "Você pode gostar"
 generos.js              gênero musical por artista: classificação pelo Claude, resumo e filtro
-texto.js                normalização de texto (busca e nomes)
+texto.js                normalização de texto (busca e nomes) e contagem por grafema
 temas.js                presets, contraste e CSS do tema
 cartaz.js               cartaz A4 com arte e QR
 email.js                ranking final por e-mail (SMTP opcional)
 maquina.js              comando da vez para o script da máquina
+recados.js              recados dos convidados para o telão
 erros.js                formato de erro da API
 rotas/
   publico.js            convidado: entrada, estado, catálogo, pedidos, votos, ranking

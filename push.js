@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { erro } from './erros.js';
+import { contarCaracteres } from './texto.js';
 import { lerFesta } from './festa.js';
 import { pedidoNaVez, filaOrdenada } from './operacao.js';
 
@@ -88,7 +89,7 @@ export function cifrar(texto, { p256dh, auth }, { sal = crypto.randomBytes(16) }
 export function validarTextoAviso(texto) {
   const limpo = String(texto ?? '').trim();
   if (!limpo) throw erro(422, 'texto_vazio', 'Escreva a mensagem.');
-  if (limpo.length > TEXTO_AVISO_MAX) throw erro(422, 'texto_longo', `A mensagem pode ter até ${TEXTO_AVISO_MAX} caracteres.`);
+  if (contarCaracteres(limpo) > TEXTO_AVISO_MAX) throw erro(422, 'texto_longo', `A mensagem pode ter até ${TEXTO_AVISO_MAX} caracteres.`);
   return limpo;
 }
 

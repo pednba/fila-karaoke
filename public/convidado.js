@@ -1,5 +1,5 @@
 // Tela do convidado (SPEC 12): entrada, Fila, Catálogo, Pedidos, Ranking, preparação e encerrada.
-import { $, esc, api, vigiar, avisar, icone, filete, definirIcone, plural, dividirTitulo, MICROFONE, LUPA } from './comum.js';
+import { $, esc, api, vigiar, avisar, icone, filete, definirIcone, plural, dividirTitulo, MICROFONE, LUPA, barraEmojis, ligarEmojis, contarCampo } from './comum.js';
 import {
   pedirPermissao, vigiarPermissao, inscrever, cartaoDesejado, dispensar, entrarPeloToken, prepararTelaDeInicio, avisoNovo, marcarVisto,
 } from './avisos.js';
@@ -311,6 +311,19 @@ function cartaoAvisos() {
     </section>`;
 }
 
+// Recado para o telão (SPEC 9.4), só com a regra ligada.
+function cartaoRecado() {
+  if (!s.festa.regras.recados || s.estado.status !== 'aberta') return '';
+  return `
+    <section class="cartao-decor pilha" style="gap: 10px;" aria-label="Recado para o telão">
+      <span class="titulo-item">Recado para o telão</span>
+      <textarea id="recado-telao" class="entrada" style="height: auto; min-height: 64px; padding: 12px 16px;" maxlength="200" rows="2" placeholder="Ex.: Parabéns, aniversariante! 🎂"></textarea>
+      ${barraEmojis('recado-telao', 100)}
+      <button type="button" class="btn btn-pequeno" data-acao="recado-telao" style="align-self: flex-start;">Mandar para o telão</button>
+      <span class="sec" style="font-size: 12px;">Aparece no telão para todos, com o seu nome.</span>
+    </section>`;
+}
+
 function renderFila() {
   const e = s.estado;
   const a = e.atual;
@@ -345,6 +358,10 @@ function renderFila() {
         </div>`).join('')
     : '<p class="sec centro" style="padding: 12px;">Ninguém na fila ainda. Peça uma música no Catálogo!</p>';
 
+  // O polling redesenha a aba: o recado em digitação continua onde estava.
+  const campo = $('#recado-telao');
+  const digitado = campo ? { valor: campo.value, ini: campo.selectionStart, fim: campo.selectionEnd, focado: document.activeElement === campo } : null;
+
   $('[data-aba="fila"]').innerHTML = `
     ${cartaoAvisos()}
     <section class="palco no-palco" aria-label="Música da vez">
@@ -355,7 +372,18 @@ function renderFila() {
     <section class="pilha" style="gap: 8px;" aria-label="Próximos cantores">
       <div class="cabeca-sec"><h2>Próximos 10</h2><span class="sec">${e.total_fila} na fila</span></div>
       ${proximos}
-    </section>`;
+    </section>
+    ${cartaoRecado()}`;
+
+  const novo = $('#recado-telao');
+  if (novo && digitado) {
+    novo.value = digitado.valor;
+    if (digitado.focado) {
+      novo.focus();
+      novo.setSelectionRange(digitado.ini, digitado.fim);
+    }
+  }
+  contarCampo('recado-telao');
 }
 
 function botoesNota(v) {
@@ -868,6 +896,14 @@ async function aoClicar(ev) {
     } else if (acao === 'dispensar-avisos') {
       dispensar();
       return renderFila();
+    } else if (acao === 'recado-telao') {
+      const campo = $('#recado-telao');
+      const texto = campo.value.trim();
+      if (!texto) return campo.focus();
+      b.disabled = true;
+      await api('POST', '/api/recados', { texto });
+      campo.value = '';
+      avisar('Recado enviado! Olhe o telão.');
     } else if (acao === 'tipo-ranking') {
       s.ranking.tipo = b.dataset.tipo;
       s.ranking.versao = null;
@@ -885,6 +921,7 @@ async function aoClicar(ev) {
 
 try {
   await entrarPeloToken();
+  ligarEmojis();
   vigiarPermissao(async () => {
     if (s.aba === 'fila') renderFila();
     if (await inscrever(s.festa?.push_chave).catch(() => false)) avisar('Pronto! Você vai receber os avisos.');

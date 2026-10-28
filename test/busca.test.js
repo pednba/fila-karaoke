@@ -58,7 +58,7 @@ test('migração recalcula a coluna busca de um catálogo antigo', () => {
   db.prepare("UPDATE musicas SET busca = 'pai fabio jr. 1'").run(); // como era antes
   db.exec(`ALTER TABLE pessoas DROP COLUMN email; ALTER TABLE festa DROP COLUMN contato; ALTER TABLE festa DROP COLUMN pix;
     ALTER TABLE festa DROP COLUMN filtro_genero; ALTER TABLE festa DROP COLUMN maquina_ativa; ALTER TABLE festa DROP COLUMN pix_mensagem; DROP TABLE generos_artista;
-    DROP TABLE inscricoes_push; DROP TABLE avisos; ALTER TABLE pedidos DROP COLUMN avisado`); // volta ao schema da versão 2
+    DROP TABLE inscricoes_push; DROP TABLE avisos; ALTER TABLE pedidos DROP COLUMN avisado; DROP TABLE recados`); // volta ao schema da versão 2
   db.pragma('user_version = 2');
   migrar(db);
   assert.equal(db.prepare('SELECT busca FROM musicas').pluck().get(), 'pai fabio junior 1');

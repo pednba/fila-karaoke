@@ -16,6 +16,7 @@ export const REGRAS_PADRAO = {
   ranking_pessoas: true,
   minimo_performances: 2,
   vip: true,
+  recados: true,
 };
 
 const LIMITES_REGRAS = {
@@ -137,7 +138,7 @@ export async function arquivarFesta(db, dataDir, { manterCatalogo = true } = {})
   let destino = path.join(pasta, `${base}.db`);
   for (let n = 2; fs.existsSync(destino); n++) destino = path.join(pasta, `${base}-${n}.db`);
   db.prepare('UPDATE pessoas SET email = NULL').run(); // e-mail não vai para o arquivo (SPEC 9.1)
-  db.exec('DELETE FROM inscricoes_push; DELETE FROM avisos;'); // nem os endereços de notificação (SPEC 9.3)
+  db.exec('DELETE FROM inscricoes_push; DELETE FROM avisos; DELETE FROM recados;'); // nem os endereços de notificação (SPEC 9.3) e os recados (9.4)
   await db.backup(destino);
 
   escrever(db, () => {

@@ -110,6 +110,7 @@ fila-karaoke/
    | Ranking de pessoas ligado | sim |
    | Mínimo de performances no ranking de pessoas | 2 |
    | VIP disponível | sim |
+   | Recados dos convidados no telão | sim |
 
    O passo mostra o dimensionamento (seção 1) com os números da festa.
 6. **Publicar**
@@ -261,6 +262,13 @@ CREATE TABLE avisos (               -- mensagens de quem organiza (9.3)
   criado_em TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE recados (              -- recados dos convidados para o telão (9.4)
+  id        INTEGER PRIMARY KEY AUTOINCREMENT,
+  pessoa_id TEXT NOT NULL REFERENCES pessoas(id) ON DELETE CASCADE,
+  texto     TEXT NOT NULL,
+  criado_em TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE meta (chave TEXT PRIMARY KEY, valor TEXT);  -- versao, ultimo_cantor_id
 ```
 
@@ -281,10 +289,10 @@ Em `pedidos`, `avisado INTEGER NOT NULL DEFAULT 0` marca que o aviso de "próxim
 - Exceção opcional: os avisos por notificação (9.3) passam pelo serviço de push do navegador (Google, Apple, Mozilla ou Microsoft), só se a pessoa permitir. O conteúdo vai cifrado e o serviço não o lê.
 - **Tela de entrada:** junto do campo de nome, o texto "Usamos um cookie só para lembrar quem você é nesta festa. Sem rastreamento." com o link "Privacidade" para `/privacidade`.
 - **Página `/privacidade`:** genérica, com o título e o tema da festa. Diz:
-  - o que é guardado: o nome escolhido, os pedidos, as notas dadas, o e-mail (só se a pessoa deixar, 9.1), o endereço de notificação do navegador (só se a pessoa permitir os avisos, 9.3) e, nos registros técnicos do servidor, endereço IP e horário dos acessos;
+  - o que é guardado: o nome escolhido, os pedidos, as notas dadas, o e-mail (só se a pessoa deixar, 9.1), o endereço de notificação do navegador (só se a pessoa permitir os avisos, 9.3), os recados mandados para o telão (9.4) e, nos registros técnicos do servidor, endereço IP e horário dos acessos;
   - para quê: montar a fila, a votação e o ranking desta festa; os registros técnicos servem só para manter o site no ar e evitar abuso;
-  - quem vê: todos na festa veem nomes, músicas pedidas e rankings; quem organiza vê também os pedidos de cada pessoa, mas não vê e-mails nem as notas individuais;
-  - por quanto tempo: o cookie vale até 24 h depois do fim da festa; o e-mail é apagado depois do envio do ranking; ao arquivar, os endereços de notificação são apagados e uma cópia do banco (sem e-mails nem endereços de notificação) fica guardada só com quem organiza;
+  - quem vê: todos na festa veem nomes, músicas pedidas, rankings e os recados do telão; quem organiza pode apagar recados; quem organiza vê também os pedidos de cada pessoa, mas não vê e-mails nem as notas individuais;
+  - por quanto tempo: o cookie vale até 24 h depois do fim da festa; o e-mail é apagado depois do envio do ranking; ao arquivar, os endereços de notificação e os recados são apagados e uma cópia do banco (sem e-mails, endereços de notificação nem recados) fica guardada só com quem organiza;
   - quem responde pelos dados: quem organiza a festa, com o contato do passo 2 quando preenchido.
 
 ## 8. Regras da fila
@@ -353,9 +361,16 @@ Toda escrita incrementa `meta.versao`.
 - **Pedido de permissão:** no toque em "Entrar na festa", se o navegador suportar push. Quem negar segue usando o app normalmente. Na aba Fila, enquanto a permissão não foi respondida, um cartão "Ativar avisos" pede de novo (com "Agora não", lembrado no aparelho). Se o navegador abafar o pedido (o Chrome às vezes mostra só um sininho na barra de endereço), o cartão diz para tocar no sininho e escolher Permitir; se as notificações estiverem bloqueadas, explica como liberar nas permissões do site. Quando a permissão é dada fora do app, a inscrição é feita na hora.
 - **iPhone:** o push só funciona com o app adicionado à Tela de Início. No Safari do iPhone, o cartão mostra a instrução "Toque em Compartilhar e depois em Adicionar à Tela de Início". O app da Tela de Início não enxerga o cookie do Safari: o endereço da página passa a levar um token de entrada (`/?entrar=<token>`, assinado com `COOKIE_SECRET`), que o app troca pelo cookie `kid` ao abrir e tira da barra.
 - **"Sua música é a próxima":** quando um pedido vira o primeiro da fila (8.2) com alguém no palco, o dono recebe "{nome}, sua música “{título}” é a próxima!" (título da notificação: o nome em destaque da festa). Uma vez por pedido (`pedidos.avisado`); se o pedido for pulado e voltar para a fila, pode avisar de novo. Se o admin reordenar a fila depois do aviso, ele pode deixar de valer (risco aceito).
-- **Mensagem de quem organiza:** no admin, "Mensagem para os convidados" (até 200 caracteres, ex.: "Hora do parabéns!"). Sai por push para todas as inscrições e aparece como janela no app para quem estiver com ele aberto ou abrir em até 15 minutos, uma vez por aparelho.
+- **Mensagem de quem organiza:** no admin, "Mensagem para os convidados" (até 200 caracteres, ex.: "Hora do parabéns! 🎉"; emojis valem, contados como um caractere cada, e o campo tem uma fileira de emojis para tocar e inserir). Sai por push para todas as inscrições e aparece como janela no app para quem estiver com ele aberto ou abrir em até 15 minutos, uma vez por aparelho.
 - Inscrição que o serviço de push recusar como inexistente (`404`/`410`) é apagada. Só endereços dos serviços conhecidos são aceitos (Google, Mozilla, Apple, Microsoft).
 - Nada disso funciona com a festa fora de `aberta`.
+
+### 9.4 Recados no telão
+- Com a regra "Recados dos convidados no telão" ligada (passo 5) e a festa aberta, a aba Fila do convidado tem o cartão "Recado para o telão": até 100 caracteres (emojis contam um cada), com a mesma fileira de emojis do admin, e o aviso "Aparece no telão para todos, com o seu nome."
+- Um recado por pessoa a cada 60 segundos (`429 recado_rapido`). Não sai por notificação nem aparece no app: só no telão (12).
+- O telão mostra os 6 mais recentes, o mais novo em cima, com o nome de quem mandou.
+- Moderação depois de publicado: no admin, a lista "Recados no telão" (os 10 mais recentes) com "Apagar". Recado apagado some do telão na próxima atualização.
+- Arquivar a festa apaga os recados.
 
 ## 10. API
 
@@ -370,6 +385,8 @@ JSON. Erros: `{ "erro": "codigo", "mensagem": "texto para a tela" }`.
 | `GET /api/festa` | | dados públicos: status, título, nome em destaque, subtítulo, data, local, contato, pix, `pix_mensagem`, `filtro_genero`, `push_chave` (chave pública VAPID ou `null` sem `https`, 9.3), url da arte, tema, regras visíveis |
 | `GET /api/festa/arte` | | a imagem |
 | `GET /api/festa/qr.svg` | | QR code do link da festa (`PUBLIC_URL`), para o telão (12) |
+| `GET /api/recados` | | `{recados: [{id, nome, texto, criado_em}]}`, os 6 mais recentes; vazio com a regra desligada (9.4) |
+| `POST /api/recados` | `{texto}` | `201 {recado}`; `texto_vazio`, `texto_longo`, `recado_rapido`, `recados_desligados`, `festa_fechada` (9.4) |
 | `POST /api/pessoas` | `{nome}` | `201` + cookie; `409 nome_em_uso`; `403 festa_fechada` |
 | `GET /manifest.webmanifest` | | manifesto do app (nome = título da festa, `display: standalone`) e ícones, para a Tela de Início (9.3) |
 | `GET /favicon.svg`, `/icone-{180,192,512}.png`, `/apple-touch-icon.png`, `/favicon.ico` | | ícone do app: microfone na cor `destaque-palco` sobre `palco`, do tema da festa; os PNGs saem do mesmo desenho (sharp) e também aparecem nas notificações |
@@ -409,7 +426,7 @@ JSON. Erros: `{ "erro": "codigo", "mensagem": "texto para a tela" }`.
 | `POST /api/festa/abrir`, `/encerrar`, `/arquivar` | |
 
 ### 10.4 Operação (admin)
-`POST /api/admin/login`, `GET /api/admin/estado`, `POST /api/admin/cantou`, `POST /api/admin/pular`, `POST /api/admin/pedidos/:id/mover {direcao}`, `PATCH /api/admin/pedidos/:id {bypass}`, `GET /api/admin/pessoas`, `PATCH /api/admin/pessoas/:id {vip}`, `POST /api/admin/pedidos {nome, musica_cod}`, `POST /api/admin/avisos {texto}` → `201 {aviso, inscricoes}` (`texto_vazio`, `texto_longo`, `festa_fechada`; 9.3). `GET /api/admin/estado` traz `avisos: {inscritos, ultimo}` (pessoas com notificação ligada e a última mensagem).
+`POST /api/admin/login`, `GET /api/admin/estado`, `POST /api/admin/cantou`, `POST /api/admin/pular`, `POST /api/admin/pedidos/:id/mover {direcao}`, `PATCH /api/admin/pedidos/:id {bypass}`, `GET /api/admin/pessoas`, `PATCH /api/admin/pessoas/:id {vip}`, `POST /api/admin/pedidos {nome, musica_cod}`, `POST /api/admin/avisos {texto}` → `201 {aviso, inscricoes}` (`texto_vazio`, `texto_longo`, `festa_fechada`; 9.3). `GET /api/admin/estado` traz `avisos: {inscritos, ultimo}` (pessoas com notificação ligada e a última mensagem) e `recados` (os 10 mais recentes, 9.4); `DELETE /api/admin/recados/:id` → `204` apaga um recado.
 
 ### 10.5 Máquina de karaokê (opcional)
 Um script fora do app (`integracoes/`) roda num aparelho ao lado da máquina e manda o código por infravermelho (Broadlink ou controle universal Tuya). Liga com `MAQUINA_TOKEN` no `.env` (pelo menos 16 caracteres); sem ele, as rotas respondem `404 maquina_desligada` e o admin não mostra nada da máquina.
@@ -464,6 +481,7 @@ Referência visual: `docs/design/` (formato do protótipo; ver o LEIA-ME de lá)
 - **Cabeçalho:** título curto + nome do convidado.
 - **Menu inferior:** Fila · Catálogo · Pedidos (n) · Ranking.
 - **Avisos:** cartão "Ativar avisos" ou a instrução do iPhone na aba Fila; janela com a mensagem de quem organiza (9.3).
+- **Recado para o telão** na aba Fila, quando ligado (9.4).
 - **Fila:** "Agora no palco" (título, artista, código grande, cantor); "Cantou?" quando é a vez do usuário; "Fulano já terminou?" (com confirmação) quando `atual.liberado_em` já passou; cartões de voto (atual e anterior); "Próximos 10" com o usuário destacado.
 - **Catálogo:** busca, Músicas / Artistas, filtros (idioma e, se ligado, gênero), rolagem infinita, "Você pode gostar", "Pedir"/"Na fila", aviso de limite.
 - **Pedidos:** posição, espera estimada, cancelar, "Já cantei".
@@ -474,17 +492,17 @@ Referência visual: `docs/design/` (formato do protótipo; ver o LEIA-ME de lá)
 ### Telão (`/festa`)
 Página só de leitura para uma TV na horizontal (navegador da TV, Chromecast ou notebook no HDMI), sem cadastro nem cookie: usa as mesmas rotas públicas (`GET /api/festa`, `GET /api/estado` sem `kid`, `GET /api/ranking`), com o mesmo polling (10.1), e nunca mostra a parcial de votação aberta.
 - **Cabeçalho:** nome em destaque da festa e o filete do tema.
-- **Esquerda, Fila:** "Agora no palco" (título, artista, cantor; sem o código da música, que é do operador) e os próximos 10 com o total na fila. Palco vazio: "O palco está livre!".
+- **Esquerda:** "Agora no palco" (título, artista, cantor; sem o código da música, que é do operador). Embaixo, lado a lado: os próximos (até 10, uma linha cada, quantos couberem na tela) e os recados dos convidados (9.4; "Mande um recado pelo celular!" enquanto não houver). Palco vazio: "O palco está livre!". Com os recados desligados, os próximos ocupam a largura toda.
 - **Direita, Ranking** (com a votação ligada): os 5 primeiros de Pessoas e os 5 de Performances (só Performances, até 8, com o ranking de pessoas desligado ou vazio), o 1º em destaque. Embaixo, "Votação aberta para {cantor}" enquanto houver.
 - **QR code** para entrar na festa, com o link escrito (sempre visível com a festa aberta; com a votação desligada, ocupa a coluna da direita).
-- **Mensagem de quem organiza** (9.3): faixa em destaque enquanto valer.
+- **Mensagem de quem organiza** (9.3): faixa em destaque por 15 minutos.
 - **Rascunho:** nome da festa e "Festa em preparação". **Encerrada:** "Obrigado!" e o ranking final (até 10 de cada).
 - Textos em tamanho de TV (proporcionais à largura da tela); um toque ou clique põe em tela cheia; a página pede para a tela não apagar (Wake Lock, quando o navegador permite).
 - O admin tem o link "Abrir telão" no menu Festa.
 
 ### Admin (`/admin`)
 - Sem PIN configurado: assistente de setup (seção 4).
-- Com festa: Operação (contadores, palco com Cantou/Pular e, com a máquina ligada (10.5), o estado da máquina e "Reenviar código", fila com ↑ ↓, Bypass, VIP, selos, convidados, adicionar pedido, "Mensagem para os convidados" (9.3)) e um menu Festa (editar dados, visual, catálogo, regras, QR, encerrar, arquivar).
+- Com festa: Operação (contadores, palco com Cantou/Pular e, com a máquina ligada (10.5), o estado da máquina e "Reenviar código", fila com ↑ ↓, Bypass, VIP, selos, convidados, adicionar pedido, "Mensagem para os convidados" (9.3), "Recados no telão" com Apagar (9.4)) e um menu Festa (editar dados, visual, catálogo, regras, QR, encerrar, arquivar).
 
 ## 13. Instalação
 
@@ -529,3 +547,4 @@ Ver `README.md`. Variáveis de ambiente (`.env.example`): `PORT`, `PUBLIC_URL`, 
 - Prêmio por Pix sem integração de pagamento: só a chave de quem organiza (9.2).
 - Avisos por Web Push com `node:crypto` em vez de biblioteca; no iPhone, só pela Tela de Início, com token de entrada para levar a identidade (9.3).
 - Telão entrou depois da v1 inicial, a pedido de quem organiza: só leitura, sem login, com os mesmos dados que qualquer convidado já vê (12).
+- Recados dos convidados só no telão, sem moderação prévia: limite de 1 por minuto e "Apagar" no admin bastam numa festa entre conhecidos (9.4). Tamanho de texto contado por grafema, para emoji valer um (9.3).

@@ -143,3 +143,46 @@ export function recarregarTema() {
   const link = $('link[href^="/tema.css"]');
   if (link) link.href = `/tema.css?v=${Date.now()}`;
 }
+
+// Fileira de emojis para tocar e inserir num campo de texto (SPEC 9.3 e 9.4), com contador.
+// O limite conta cada emoji como um caractere, igual ao servidor.
+const EMOJIS = ['🎉', '🎂', '🎤', '🎶', '❤️', '😍', '👏', '🔥', '😂', '🥳', '💃', '🍻'];
+const grafemas = typeof Intl.Segmenter === 'function' ? new Intl.Segmenter('pt-BR', { granularity: 'grapheme' }) : null;
+export const contarCaracteres = (t) => (grafemas ? [...grafemas.segment(t)].length : [...t].length);
+
+export function barraEmojis(alvo, max, { desligada = false } = {}) {
+  return `
+    <div class="emojis" role="group" aria-label="Inserir emoji">
+      ${EMOJIS.map((e) => `<button type="button" data-emoji="${e}" data-alvo="${alvo}" ${desligada ? 'disabled' : ''}>${e}</button>`).join('')}
+    </div>
+    <span class="sec contador" data-contador="${alvo}" data-max="${max}">0/${max}</span>`;
+}
+
+function atualizarContador(campo) {
+  const el = document.querySelector(`[data-contador="${campo.id}"]`);
+  if (!el) return;
+  const n = contarCaracteres(campo.value);
+  el.textContent = `${n}/${el.dataset.max}`;
+  el.classList.toggle('erro-campo', n > Number(el.dataset.max));
+}
+export const contarCampo = (id) => { const c = document.getElementById(id); if (c) atualizarContador(c); };
+
+let emojisLigados = false;
+export function ligarEmojis() {
+  if (emojisLigados) return;
+  emojisLigados = true;
+  // pointerdown sem foco: o cursor do campo fica onde estava.
+  document.addEventListener('pointerdown', (ev) => { if (ev.target.closest('[data-emoji]')) ev.preventDefault(); });
+  document.addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-emoji]');
+    if (!b || b.disabled) return;
+    const campo = document.getElementById(b.dataset.alvo);
+    if (!campo || campo.disabled) return;
+    const ini = campo.selectionStart ?? campo.value.length;
+    const fim = campo.selectionEnd ?? ini;
+    campo.setRangeText(b.dataset.emoji, ini, fim, 'end');
+    campo.focus();
+    atualizarContador(campo);
+  });
+  document.addEventListener('input', (ev) => { if (ev.target.id && ev.target.matches('textarea, input')) atualizarContador(ev.target); });
+}

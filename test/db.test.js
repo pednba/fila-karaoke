@@ -8,7 +8,7 @@ test('cria as tabelas da seção 6 e começa na versão 0', () => {
     .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
     .pluck()
     .all();
-  assert.deepEqual(tabelas, ['avisos', 'festa', 'generos_artista', 'inscricoes_push', 'meta', 'musicas', 'pedidos', 'pessoas', 'votos']);
+  assert.deepEqual(tabelas, ['avisos', 'festa', 'generos_artista', 'inscricoes_push', 'meta', 'musicas', 'pedidos', 'pessoas', 'recados', 'votos']);
   assert.equal(lerVersao(db), 0);
   assert.equal(db.pragma('foreign_keys', { simple: true }), 1);
 });
@@ -16,7 +16,7 @@ test('cria as tabelas da seção 6 e começa na versão 0', () => {
 test('migrar é idempotente', () => {
   const db = abrirBanco(':memory:');
   migrar(db);
-  assert.equal(db.pragma('user_version', { simple: true }), 9);
+  assert.equal(db.pragma('user_version', { simple: true }), 10);
   assert.equal(lerVersao(db), 0);
 });
 

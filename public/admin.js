@@ -1,5 +1,5 @@
 // Painel do admin (SPEC 12): login por PIN, Operação e menu Festa.
-import { $, esc, api, vigiar, avisar, icone, filete, definirIcone, plural, formatarDuracao } from './comum.js';
+import { $, esc, api, vigiar, avisar, icone, filete, definirIcone, plural, formatarDuracao, barraEmojis, ligarEmojis, contarCampo } from './comum.js';
 
 const app = $('#app');
 const s = { festa: null, estado: null, pessoas: [], versaoPessoas: null, aba: 'operacao', busca: [] };
@@ -72,6 +72,7 @@ function iniciarPainel() {
     render();
   };
   app.onclick = aoClicar;
+  ligarEmojis();
   app.oninput = aoDigitar;
   poll = vigiar('/api/admin/estado', aoEstado, {
     aoErro: (e) => {
@@ -107,6 +108,9 @@ function avisoStatus() {
   if (st === 'encerrada') return '<p class="aviso">Festa encerrada. Pedidos e votos estão bloqueados; os convidados veem o ranking final.</p>';
   return '';
 }
+
+// "2026-11-02 21:15:00" (UTC do SQLite) → "18:15".
+const hora = (criado_em) => new Date(`${criado_em.replace(' ', 'T')}Z`).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
 function renderOperacao() {
   const e = s.estado;
@@ -187,10 +191,25 @@ function renderOperacao() {
     <section class="cartao-decor pilha" style="gap: 10px; border-radius: 16px; padding: 14px;" aria-label="Mensagem para os convidados">
       <h2 class="rotulo" style="font-size: 13px;">Mensagem para os convidados</h2>
       <p class="sec" style="line-height: 1.4;">Aparece em janela para quem estiver com o app aberto ou abrir nos próximos 15 minutos${s.festa.push_chave ? ` e chega como notificação para ${plural(e.avisos?.inscritos ?? 0, 'pessoa com avisos ligados', 'pessoas com avisos ligados')}` : ''}.</p>
-      <textarea id="recado" class="entrada" style="height: auto; min-height: 76px; padding: 12px 16px; background: var(--fundo);" maxlength="200" rows="3" placeholder="Ex.: Hora do parabéns! Todos para o salão." ${fechada ? 'disabled' : ''}></textarea>
+      <textarea id="recado" class="entrada" style="height: auto; min-height: 76px; padding: 12px 16px; background: var(--fundo);" maxlength="400" rows="3" placeholder="Ex.: Hora do parabéns! 🎉 Todos para o salão." ${fechada ? 'disabled' : ''}></textarea>
+      ${barraEmojis('recado', 200, { desligada: fechada })}
       <button type="button" class="btn" data-acao="recado" style="align-self: flex-start;" ${fechada ? 'disabled' : ''}>Enviar para todos</button>
-      ${ultimo ? `<p class="sec" style="overflow-wrap: anywhere;">Última: “${esc(ultimo.texto)}” às ${esc(new Date(`${ultimo.criado_em.replace(' ', 'T')}Z`).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }))}</p>` : ''}
+      ${ultimo ? `<p class="sec" style="overflow-wrap: anywhere;">Última: “${esc(ultimo.texto)}” às ${esc(hora(ultimo.criado_em))}</p>` : ''}
     </section>`;
+
+  // Recados dos convidados no telão (SPEC 9.4): moderação depois de publicado.
+  const recados = r.recados ? `
+    <section class="pilha" style="gap: 8px;" aria-label="Recados no telão">
+      <div class="cabeca-filete"><h2>Recados no telão</h2><span class="traco"></span><a class="sec" href="/festa" target="_blank" rel="noopener">Abrir telão</a></div>
+      ${(e.recados ?? []).map((m) => `
+        <div class="item" style="padding: 8px 12px;">
+          <div class="cresce" style="min-width: 0;">
+            <div class="titulo-item cortar">${esc(m.nome)} <span class="sec" style="font-weight: 400;">· ${esc(hora(m.criado_em))}</span></div>
+            <div class="sec" style="overflow-wrap: anywhere;">${esc(m.texto)}</div>
+          </div>
+          <button type="button" class="btn btn-alerta btn-pequeno" data-acao="apagar-recado" data-id="${m.id}" aria-label="Apagar recado de ${esc(m.nome)}">Apagar</button>
+        </div>`).join('') || '<p class="sec centro" style="padding: 12px;">Nenhum recado ainda.</p>'}
+    </section>` : '';
 
   const nomeDigitado = $('#add-nome')?.value ?? '';
   const qDigitada = $('#add-q')?.value ?? '';
@@ -208,6 +227,7 @@ function renderOperacao() {
       ${palco}
     </section>
     ${recado}
+    ${recados}
     <section class="pilha" style="gap: 8px;" aria-label="Fila completa">
       <div class="cabeca-filete"><h2>Fila</h2><span class="traco"></span>${icone()}</div>
       ${fila || '<p class="sec centro" style="padding: 12px;">Ninguém esperando.</p>'}
@@ -229,6 +249,7 @@ function renderOperacao() {
     </section>`;
 
   $('#recado').value = recadoDigitado;
+  contarCampo('recado');
   $('#add-nome').value = nomeDigitado;
   $('#add-q').value = qDigitada;
   if (['recado', 'add-nome', 'add-q'].includes(focado)) $(`#${focado}`).focus();
@@ -381,6 +402,10 @@ async function aoClicar(ev) {
       const r = await api('POST', '/api/admin/avisos', { texto });
       $('#recado').value = '';
       avisar(s.festa.push_chave ? `Mensagem enviada. Notificação para ${plural(r.inscricoes, 'aparelho', 'aparelhos')}.` : 'Mensagem enviada.', { baixo: true });
+    } else if (acao === 'apagar-recado') {
+      if (!confirm('Apagar este recado? Ele some do telão.')) return;
+      await api('DELETE', `/api/admin/recados/${id}`);
+      avisar('Recado apagado.', { baixo: true });
     } else if (acao === 'encerrar') {
       if (!confirm('Encerrar a festa? Pedidos e votos ficam bloqueados e os convidados passam a ver o ranking final.')) return;
       await api('POST', '/api/festa/encerrar');

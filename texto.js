@@ -25,3 +25,11 @@ export function normalizarBusca(s) {
     .map((p) => p.replace(/(\p{L})\1+/gu, '$1'))
     .join(' ');
 }
+
+// Tamanho como a pessoa vê (SPEC 9.3): cada emoji, mesmo composto (❤️, 👍🏽), conta um caractere.
+const grafemas = new Intl.Segmenter('pt-BR', { granularity: 'grapheme' });
+export function contarCaracteres(s) {
+  let n = 0;
+  for (const _ of grafemas.segment(String(s ?? ''))) n++;
+  return n;
+}

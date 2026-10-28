@@ -253,3 +253,10 @@ pre.amostra { margin: 0; padding: 10px; border-radius: 10px; background: var(--s
 .texto-longo { padding-bottom: 32px; line-height: 1.55; }
 .texto-longo ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
 .texto-longo h2 { color: var(--texto-2); }
+
+/* Fileira de emojis dos campos de mensagem (SPEC 9.3 e 9.4) */
+.emojis { display: flex; flex-wrap: wrap; gap: 4px; }
+.emojis button { width: 40px; height: 40px; font-size: 22px; line-height: 1; border-radius: 10px; border: 1px solid var(--borda); background: var(--superficie); cursor: pointer; }
+.emojis button:disabled { opacity: 0.5; cursor: default; }
+.contador { font-size: 12px; align-self: flex-end; font-variant-numeric: tabular-nums; }
+.contador.erro-campo { color: var(--alerta); }

@@ -11,6 +11,7 @@ import { listarArtistas, sugerir } from '../artistas.js';
 import { validarEmail } from '../email.js';
 import { GENEROS, listarGeneros } from '../generos.js';
 import { validarInscricao, avisoVigente } from '../push.js';
+import { listarRecados, criarRecado, RECADOS_TELAO } from '../recados.js';
 import {
   pedidoNaVez, filaOrdenada, pedir, cancelar, cantou, votar, votacoesAbertas, ranking,
 } from '../operacao.js';
@@ -239,6 +240,16 @@ export function rotasPublicas({ db, config, auth, email, push }) {
     const campo = tipo === 'pessoas' ? 'media' : 'nota';
     const lista = ranking(db, tipo).map((item, i) => ({ posicao: i + 1, ...item, [`${campo}_texto`]: formatarNota(item[campo]) }));
     res.json({ tipo, ranking: lista });
+  });
+
+  // Recados no telão (SPEC 9.4).
+  r.get('/recados', (req, res) => {
+    res.json({ recados: lerFesta(db).regras.recados ? listarRecados(db, RECADOS_TELAO) : [] });
+  });
+
+  r.post('/recados', comPessoa, (req, res) => {
+    const recado = escrever(db, () => criarRecado(db, { pessoa_id: req.pessoa.id, texto: req.body?.texto }));
+    res.status(201).json({ recado });
   });
 
   return r;

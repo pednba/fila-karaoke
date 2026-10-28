@@ -2,7 +2,7 @@
 import { $, esc, api, vigiar, icone, filete, definirIcone, plural, recarregarTema, MICROFONE } from './comum.js';
 
 const app = $('#app');
-const s = { festa: null, estado: null, qr: '', ranking: { versao: null, pessoas: [], performances: [] } };
+const s = { festa: null, estado: null, qr: '', ranking: { versao: null, pessoas: [], performances: [] }, recados: { versao: null, lista: [] } };
 
 async function carregarFesta() {
   s.festa = await api('GET', '/api/festa');
@@ -35,6 +35,16 @@ async function carregarRanking() {
   s.ranking = { versao: s.estado.versao, pessoas, performances };
 }
 
+// Recados dos convidados (SPEC 9.4): só quando algo mudou na festa.
+async function carregarRecados() {
+  if (!s.festa.regras.recados || s.recados.versao === s.estado.versao) return;
+  try {
+    s.recados = { versao: s.estado.versao, lista: (await api('GET', '/api/recados')).recados };
+  } catch {
+    // fica a lista anterior; tenta de novo na próxima mudança
+  }
+}
+
 async function aoEstado(estado) {
   const mudouStatus = s.estado && s.estado.status !== estado.status;
   s.estado = estado;
@@ -42,7 +52,7 @@ async function aoEstado(estado) {
     await carregarFesta();
     recarregarTema();
   }
-  await carregarRanking();
+  await Promise.all([carregarRanking(), carregarRecados()]);
   render();
 }
 
@@ -71,22 +81,51 @@ function palco() {
     </section>`;
 }
 
+// Uma linha por cantor; quantos couberem (cortar() esconde os que passariam da tela).
 function proximos() {
-  const e = s.estado;
-  const itens = e.proximos.map((p, i) => `
+  const itens = s.estado.proximos.map((p, i) => `
     <div class="t-item">
       <span class="t-num">${i + 1}</span>
-      <div class="cresce" style="min-width: 0;">
-        <div class="t-item-nome t-cortar">${esc(p.cantor)}</div>
-        <div class="t-item-musica t-cortar">${esc(p.titulo)} · ${esc(p.artista)}</div>
-      </div>
+      <span class="t-item-nome t-cortar">${esc(p.cantor)}</span>
+      <span class="t-item-musica t-cortar">${esc(p.titulo)}</span>
     </div>`).join('');
   return `
-    <section class="t-coluna" style="gap: 0.6em;" aria-label="Próximos cantores">
+    <section class="t-coluna t-lista" aria-label="Próximos cantores">
       <div class="t-cabeca"><h2>Próximos</h2></div>
-      ${itens ? `<div class="t-proximos">${itens}</div>` : '<p class="t-vazio">Ninguém na fila ainda. Peça sua música pelo celular!</p>'}
+      ${itens ? `<div class="t-proximos" data-cortar>${itens}</div>` : '<p class="t-vazio">Ninguém na fila ainda. Peça sua música pelo celular!</p>'}
     </section>`;
 }
+
+function recados() {
+  const itens = s.recados.lista.map((m) => `
+    <div class="t-recado">
+      <span class="t-recado-nome t-cortar">${esc(m.nome)}</span>
+      <span class="t-recado-texto">${esc(m.texto)}</span>
+    </div>`).join('');
+  return `
+    <section class="t-coluna t-lista" aria-label="Recados dos convidados">
+      <div class="t-cabeca"><h2>Recados</h2></div>
+      ${itens ? `<div class="t-recados" data-cortar>${itens}</div>` : '<p class="t-vazio">Mande um recado pelo celular!</p>'}
+    </section>`;
+}
+
+function baixo() {
+  return s.festa.regras.recados ? `<div class="t-baixo">${proximos()}${recados()}</div>` : `<div class="t-baixo t-baixo-um">${proximos()}</div>`;
+}
+
+// Esconde os itens que não cabem inteiros na altura disponível.
+function cortar() {
+  for (const lista of app.querySelectorAll('[data-cortar]')) {
+    const limite = lista.getBoundingClientRect().bottom;
+    let cabe = true;
+    for (const item of lista.children) item.hidden = false;
+    for (const item of lista.children) {
+      cabe = cabe && item.getBoundingClientRect().bottom <= limite + 1;
+      item.hidden = !cabe;
+    }
+  }
+}
+addEventListener('resize', cortar);
 
 function linhaRank(r, i, tipo) {
   const pessoas = tipo === 'pessoas';
@@ -134,9 +173,20 @@ function qr(grande = false) {
     </section>`;
 }
 
+// A mensagem de quem organiza fica 15 minutos (SPEC 9.3). O servidor só para de mandá-la quando algo
+// muda na festa, então o telão conta o tempo desde que a viu pela primeira vez.
+const VALIDADE_AVISO_MS = 15 * 60 * 1000;
+const avisoVisto = { id: null, em: 0, timer: null };
 function aviso() {
   const a = s.estado.aviso;
-  return a ? `<div class="t-aviso" role="status">${icone()}<span>${esc(a.texto)}</span></div>` : '';
+  if (!a) return '';
+  if (avisoVisto.id !== a.id) {
+    Object.assign(avisoVisto, { id: a.id, em: Date.now() });
+    clearTimeout(avisoVisto.timer);
+    avisoVisto.timer = setTimeout(render, VALIDADE_AVISO_MS + 500);
+  }
+  if (Date.now() - avisoVisto.em > VALIDADE_AVISO_MS) return '';
+  return `<div class="t-aviso" role="status">${icone()}<span>${esc(a.texto)}</span></div>`;
 }
 
 function render() {
@@ -165,10 +215,11 @@ function render() {
   app.innerHTML = `
     ${topo()}
     <main class="t-corpo">
-      <div class="t-coluna">${palco()}${proximos()}</div>
+      <div class="t-coluna">${palco()}${baixo()}</div>
       <div class="t-coluna">${s.festa.regras.votacao ? ranking() + qr() : qr(true)}</div>
     </main>
     ${aviso()}`;
+  cortar();
 }
 
 // Tela cheia no primeiro toque; tela acesa enquanto a página estiver visível.

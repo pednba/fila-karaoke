@@ -32,11 +32,13 @@ A fonte da verdade é a [`SPEC.md`](SPEC.md). Este README resume o que existe e 
 | Catálogo | Busca por título, artista, trecho da letra ou código, tolerante a grafias ("Fábio Jr." = "Fabio Júnior"). Filtro Nacionais/Internacionais e rolagem infinita | 5.4 |
 | Navegar por artista | Lista A–Z com o total de músicas de cada artista; duplas e participações contam para cada um | 5.5 |
 | Você pode gostar | Sugere uma música de um artista que a pessoa já cantou | 5.6 |
+| Filtro por gênero | Opcional: chips de gênero musical na busca, quando quem organiza classificou o catálogo e ligou o filtro | 5.7 |
 | Pedidos | Limite de pedidos pendentes por pessoa, posição e espera estimada, cancelar | 8.4 |
 | Fila | "Agora no palco" com o código grande e os próximos 10 | 12 |
 | Cantou? | O cantor confirma. Depois de 2 minutos, quem está na fila (menos o próximo) também pode: "Fulano já terminou?" | 8.4 |
 | Nota da festa | Voto de 0 a 10 em cada performance; a nota é a mediana. A parcial fica escondida enquanto a votação está aberta | 9 |
 | Ranking | De performances e de pessoas, com mínimos configuráveis | 9 |
+| Prêmio por Pix | Opcional: com a chave Pix de quem organiza, a aba Ranking convida a contribuir para o prêmio de quem ganhar. O app não confere pagamentos | 9.2 |
 | Ranking por e-mail | Opcional, com SMTP: quem deixar o e-mail recebe o ranking final, e o endereço é apagado depois | 9.1 |
 | Privacidade | Aviso de cookie na entrada e página `/privacidade`. Só cookies essenciais, nada de terceiros no navegador (as fontes saem do próprio servidor), por isso sem banner de consentimento | 7.1 |
 
@@ -88,6 +90,7 @@ festa.js                dados da festa, regras, dimensionamento, arquivar
 auth.js                 PIN, cookie do admin, SETUP_TOKEN
 catalogo.js             gravação do catálogo importado
 artistas.js             navegação por artista e "Você pode gostar"
+generos.js              gênero musical por artista: classificação pelo Claude, resumo e filtro
 texto.js                normalização de texto (busca e nomes)
 temas.js                presets, contraste e CSS do tema
 cartaz.js               cartaz A4 com arte e QR
@@ -204,6 +207,16 @@ pdftotext -layout lista.pdf lista.txt
 python3 importadores/pdf_lista_aparelho.py lista.txt catalogo.json
 ```
 
+### Gênero musical (opcional)
+
+As listas de aparelho não trazem gênero. No passo 4 do setup, quem organiza pode colar uma chave de API da Anthropic para o Claude classificar os artistas (cerca de US$ 1 a cada mil artistas, na conta de quem cola a chave). A chave não é gravada em lugar nenhum. O setup mostra a cobertura e a precisão estimada antes de ligar o filtro para os convidados. Detalhes na SPEC 5.7.
+
+Uma classificação feita fora do app entra por CSV `artista;genero;confianca`, rodado no servidor com o mesmo `DATA_DIR` do app:
+
+```bash
+node scripts/importar-generos.js generos.csv
+```
+
 ## Máquina de karaokê (opcional)
 
 Quando alguém vira a vez, um script num celular Android (Termux) ao lado da máquina pega o código da música no app. Ele "digita" esse código por infravermelho, usando um emissor Wi-Fi: **Broadlink** ou **controle universal Tuya / Smart Life**.
@@ -238,7 +251,7 @@ Pontos conhecidos e ideias em aberto. O que estiver fora da SPEC precisa de deci
   - Falta validar com máquinas reais: se o código + "reservar" começa a música e o que acontece com uma música tocando (entra como a próxima ou interrompe a atual).
   - O emissor Tuya exige a chave local do aparelho, obtida pela plataforma de desenvolvedor da Tuya. Ainda não há um caminho mais simples.
 - **"Pular ausente" com a máquina:** a música do ausente já foi enviada e pode estar tocando. Hoje o app não manda "parar". Decidir se o Pular deve enviar essa tecla.
-- **Gênero musical no catálogo:** as listas de aparelho não trazem gênero, então hoje se navega por artista. Classificar por gênero está em estudo.
+- **Gênero musical:** a classificação é por artista principal, não por música. Artista que muda de gênero fica com o gênero pelo qual é mais conhecido, e a precisão mostrada é uma estimativa a partir da confiança declarada pelo modelo.
 - **Artistas com hífen sem espaço** ("Fulano-Ciclano") não são separados em participantes, para não quebrar nomes como A-ha e Jay-Z.
 - **Truncamento do PDF:** artistas longos ("...") e títulos com mais de ~30 caracteres vêm cortados na lista do aparelho. Não há como recuperar.
 - **Identidade por cookie:** limpar o cookie ou usar aba anônima cria outra pessoa, com outro voto e outra cota de pedidos. É um risco aceito.

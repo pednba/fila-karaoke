@@ -84,6 +84,7 @@ fila-karaoke/
    - Data e hora de início, duração em horas.
    - Local (opcional, texto livre).
    - Contato de quem organiza (opcional, texto livre até 120 caracteres: e-mail ou telefone). Aparece na página de privacidade (7.1).
+   - Chave Pix de quem organiza (opcional, até 77 caracteres), para o prêmio de quem ganhar o ranking (9.2).
    - Número estimado de convidados.
 3. **Visual**
    - Arte da festa: upload JPG/PNG/WebP até 5 MB (o convite, por exemplo). Aparece na tela de entrada dos convidados e no topo do ranking final. Redimensionar no servidor para no máximo 1200 px de largura.
@@ -94,6 +95,7 @@ fila-karaoke/
    - Upload do arquivo do aparelho: PDF no formato "lista de músicas do aparelho" (seção 5.2) ou CSV (seção 5.3).
    - O servidor importa e mostra o resultado antes de confirmar: total de músicas, quantas por idioma, linhas ignoradas (com amostra), códigos duplicados. Se o PDF tiver um total no rodapé, comparar e avisar se não bater.
    - Pode reimportar a qualquer momento antes de abrir a festa. Depois de aberta, reimportar exige confirmação (pedidos de músicas que sumirem são cancelados).
+   - Gênero musical (opcional, 5.7): classificar os artistas com uma chave de API da Anthropic, ver a precisão estimada e decidir se liga o filtro por gênero.
 5. **Regras** (todas com padrão)
 
    | Regra | Padrão |
@@ -116,7 +118,7 @@ fila-karaoke/
 `rascunho` → `aberta` → `encerrada` → (arquivar) → novo `rascunho`.
 - `aberta`: tudo funcionando.
 - `encerrada`: convidados veem só o ranking final e "Obrigado!"; pedidos e votos bloqueados.
-- **Arquivar:** copia o banco para `data/arquivo/<data>-<slug>.db` e zera pessoas, pedidos, votos e a festa. O catálogo pode ser mantido para a próxima festa.
+- **Arquivar:** copia o banco para `data/arquivo/<data>-<slug>.db` e zera pessoas, pedidos, votos e a festa. O catálogo pode ser mantido para a próxima festa, com a classificação de gênero (5.7); o filtro de gênero volta desligado.
 - Os dados da festa podem ser editados no admin a qualquer momento (menu "Festa"), exceto o PIN, que tem tela própria.
 
 ## 5. Catálogo
@@ -158,6 +160,16 @@ O PDF não traz gênero musical, então quem não sabe o que buscar navega por a
 ### 5.6 Você pode gostar
 Quem já cantou alguma música vê **um** espaço reservado no topo do catálogo (só com a busca vazia e sem filtro de artista): uma música de um artista que a pessoa já cantou e que ela nunca pediu (em nenhum status), com o texto "Porque você cantou X". Com vários artistas, alterna entre eles a cada pedido novo da pessoa; a escolha não muda entre atualizações da tela se os pedidos dela não mudaram. Sem candidata, o espaço não aparece.
 
+### 5.7 Gênero musical (opcional)
+O PDF não traz gênero. No passo 4, depois de importar o catálogo, quem organiza pode colar uma chave de API da Anthropic para o app pedir ao Claude o gênero de cada artista.
+- **A chave não é guardada:** vai só no corpo de cada pedido ao servidor e dele para `api.anthropic.com`. Não entra no banco, no `.env`, nos registros nem em respostas da API; a tela a mantém só enquanto a página está aberta. Só nomes de artistas saem do servidor, nada de convidados. Chave recusada pela Anthropic: `422 chave_invalida`.
+- **O que é classificado:** o artista principal de cada música (o primeiro participante, 5.5), pela chave normalizada da busca (5.4). A classificação fica por artista, então sobrevive a reimportar o catálogo; rodar de novo classifica só os artistas que faltam. Cada pedido classifica até 150 artistas, os com mais músicas primeiro; a tela repete os pedidos até acabar, mostrando o progresso, e pode parar no meio.
+- **Categorias fixas:** MPB, Sertanejo, Samba/Pagode, Forró/Piseiro, Axé, Funk, Brega/Arrocha, Pop Nacional, Rock Nacional, Gospel, Infantil, Pop Internacional, Rock Internacional, Latino, Reggae, Outros. Para cada artista o modelo devolve uma categoria e a confiança (alta, média ou baixa), ou diz que não conhece o artista: aí ele fica sem gênero e não é perguntado de novo.
+- **Resultado mostrado antes de ligar:** cobertura (% das músicas com gênero), artistas e músicas por confiança, músicas por gênero, amostra dos artistas de confiança baixa com mais músicas e a **precisão estimada**: média, ponderada pelo número de músicas, de 95% (alta), 75% (média) e 50% (baixa). A tela diz que é uma estimativa a partir da confiança declarada pelo modelo, não uma conferência.
+- **Ligar é decisão de quem organiza:** o filtro (`filtro_genero`) começa desligado e pode ser ligado ou desligado a qualquer momento; também dá para apagar a classificação.
+- **No catálogo do convidado,** com o filtro ligado, no modo Músicas aparece uma linha de chips com os gêneros que têm músicas (respeitando o filtro Nacionais/Internacionais), em ordem de quantidade, com "Todos os gêneros" primeiro. Combina com a busca, o idioma e o artista. Música sem gênero só aparece em "Todos os gêneros".
+- **Classificação pronta:** `node scripts/importar-generos.js <arquivo.csv>` grava uma classificação feita fora do app (CSV `artista;genero;confianca`, cabeçalho opcional, colunas a mais ignoradas). Linha com categoria ou confiança fora da lista é ignorada e contada.
+
 ## 6. Modelo de dados
 
 ```sql
@@ -171,6 +183,8 @@ CREATE TABLE festa (
   duracao_min  INTEGER NOT NULL DEFAULT 240,
   local        TEXT NOT NULL DEFAULT '',
   contato      TEXT NOT NULL DEFAULT '',  -- de quem organiza (7.1)
+  pix          TEXT NOT NULL DEFAULT '',  -- chave Pix de quem organiza (9.2)
+  filtro_genero INTEGER NOT NULL DEFAULT 0, -- 1 = chips de gênero no catálogo (5.7)
   convidados   INTEGER NOT NULL DEFAULT 30,
   arte_arquivo TEXT,                -- caminho em data/uploads
   tema         TEXT NOT NULL,       -- JSON: preset + tokens finais (seção 11)
@@ -219,6 +233,13 @@ CREATE TABLE votos (
   nota       INTEGER NOT NULL CHECK (nota BETWEEN 0 AND 10),
   atualizado_em TEXT NOT NULL DEFAULT (datetime('now')),
   PRIMARY KEY (pedido_id, pessoa_id)
+);
+
+CREATE TABLE generos_artista (     -- 5.7
+  chave     TEXT PRIMARY KEY,       -- artista com a normalização da busca
+  genero    TEXT NOT NULL DEFAULT '', -- '' = o modelo não conhece
+  confianca TEXT NOT NULL,          -- alta | media | baixa
+  origem    TEXT NOT NULL           -- claude | importado
 );
 
 CREATE TABLE meta (chave TEXT PRIMARY KEY, valor TEXT);  -- versao, ultimo_cantor_id
@@ -298,6 +319,10 @@ Toda escrita incrementa `meta.versao`.
 - Enviou, apaga o e-mail. Falhou, o e-mail fica e o envio é tentado de novo quando o app reinicia com a festa encerrada. Arquivar a festa apaga os e-mails restantes antes do backup.
 - O admin não vê os e-mails.
 
+### 9.2 Prêmio por Pix
+- Com a votação ligada, a festa aberta e a chave Pix preenchida no passo 2, a aba Ranking mostra um cartão "Prêmio de quem ganhar": quem quiser contribuir faz um Pix para quem organiza, que repassa a quem ganhar. Mostra a chave e um botão "Copiar".
+- O app não recebe nem confere pagamentos e não mostra valores arrecadados.
+
 ## 10. API
 
 JSON. Erros: `{ "erro": "codigo", "mensagem": "texto para a tela" }`.
@@ -308,11 +333,12 @@ JSON. Erros: `{ "erro": "codigo", "mensagem": "texto para a tela" }`.
 ### 10.2 Público
 | Rota | Corpo | Resposta |
 |---|---|---|
-| `GET /api/festa` | | dados públicos: status, título, nome em destaque, subtítulo, data, local, contato, url da arte, tema, regras visíveis |
+| `GET /api/festa` | | dados públicos: status, título, nome em destaque, subtítulo, data, local, contato, pix, `filtro_genero`, url da arte, tema, regras visíveis |
 | `GET /api/festa/arte` | | a imagem |
 | `POST /api/pessoas` | `{nome}` | `201` + cookie; `409 nome_em_uso`; `403 festa_fechada` |
 | `GET /api/estado` | | `{versao, me: {nome, vip, email}, atual, proximos[10], total_fila, meus_pedidos[], votacoes[], limite}`; `atual.liberado_em` (ISO ou `null`) diz a partir de quando o convidado do cookie, se não for o dono, pode marcar Cantou (8.4) |
-| `GET /api/musicas?q=&filtro=&artista=&offset=` | | página de até 20 + `total` + `offset` (5.4, 5.5) |
+| `GET /api/musicas?q=&filtro=&artista=&genero=&offset=` | | página de até 20 + `total` + `offset` (5.4, 5.5, 5.7); `genero` fora da lista dá `422 genero_invalido` e é ignorado com o filtro de gênero desligado |
+| `GET /api/generos?filtro=` | | `{generos: [{nome, total}]}` em ordem de quantidade; lista vazia com o filtro de gênero desligado (5.7) |
 | `GET /api/artistas?filtro=` | | `{artistas: [{nome, chave, total}]}` em ordem A–Z (5.5) |
 | `PUT /api/me/email` | `{email}` | `200 {email}`; `email_invalido`, `email_desligado`, `festa_fechada` (9.1) |
 | `DELETE /api/me/email` | | `204` |
@@ -333,6 +359,10 @@ JSON. Erros: `{ "erro": "codigo", "mensagem": "texto para a tela" }`.
 | `POST /api/setup/arte` | multipart `arte` |
 | `POST /api/setup/catalogo` | multipart `arquivo` → `{previa: {total, por_idioma, ignoradas[], duplicados, total_rodape}, token}` |
 | `POST /api/setup/catalogo/confirmar` | `{token}` |
+| `GET /api/setup/generos` | resumo da classificação (5.7) |
+| `POST /api/setup/generos/classificar` | `{chave}` → `{feitos, restantes, resumo}`; `chave_invalida`, `anthropic_limite`, `anthropic_indisponivel` |
+| `PUT /api/setup/generos` | `{ativo}` liga ou desliga o filtro |
+| `DELETE /api/setup/generos` | apaga a classificação e desliga o filtro |
 | `PUT /api/setup/regras` | JSON de regras |
 | `GET /api/setup/qr.png`, `/qr.svg`, `/cartaz.pdf` ou `/cartaz.html` | material para imprimir |
 | `POST /api/festa/abrir`, `/encerrar`, `/arquivar` | |
@@ -392,9 +422,9 @@ Referência visual: `docs/design/` (formato do protótipo; ver o LEIA-ME de lá)
 - **Cabeçalho:** título curto + nome do convidado.
 - **Menu inferior:** Fila · Catálogo · Pedidos (n) · Ranking.
 - **Fila:** "Agora no palco" (título, artista, código grande, cantor); "Cantou?" quando é a vez do usuário; "Fulano já terminou?" (com confirmação) quando `atual.liberado_em` já passou; cartões de voto (atual e anterior); "Próximos 10" com o usuário destacado.
-- **Catálogo:** busca, Músicas / Artistas, filtros, rolagem infinita, "Você pode gostar", "Pedir"/"Na fila", aviso de limite.
+- **Catálogo:** busca, Músicas / Artistas, filtros (idioma e, se ligado, gênero), rolagem infinita, "Você pode gostar", "Pedir"/"Na fila", aviso de limite.
 - **Pedidos:** posição, espera estimada, cancelar, "Já cantei".
-- **Ranking:** Pessoas / Performances.
+- **Ranking:** Pessoas / Performances, cartão do prêmio por Pix (9.2).
 - **Festa em preparação** (rascunho) e **Festa encerrada** (ranking final + agradecimento).
 - **Privacidade** (`/privacidade`): o texto de 7.1, acessível sem entrar na festa.
 
@@ -440,4 +470,6 @@ Ver `README.md`. Variáveis de ambiente (`.env.example`): `PORT`, `PUBLIC_URL`, 
 - Máquina de karaokê recebe só o código da vez, nunca a fila (10.5).
 - Nome único por festa.
 - Só cookies essenciais e nenhum serviço de terceiros no navegador; transparência pela página de privacidade em vez de banner (7.1).
-- Catálogos reais não vão para o repositório (seção 5; ver README).
+- Catálogos reais não vão para o repositório (seção 5; ver README). Classificações de gênero de catálogos reais também não.
+- Gênero musical por artista, classificado pelo Claude com a chave de quem organiza, que nunca é guardada; ligar o filtro é escolha de quem organiza, depois de ver a precisão estimada (5.7).
+- Prêmio por Pix sem integração de pagamento: só a chave de quem organiza (9.2).

@@ -9,6 +9,7 @@ import { formatarNota } from '../votos.js';
 import { liberadoParaCantou } from '../fila.js';
 import { listarArtistas, sugerir } from '../artistas.js';
 import { validarEmail } from '../email.js';
+import { GENEROS, listarGeneros } from '../generos.js';
 import {
   pedidoNaVez, filaOrdenada, pedir, cancelar, cantou, votar, votacoesAbertas, ranking,
 } from '../operacao.js';
@@ -52,7 +53,7 @@ export function pedidoPublico(p, pessoa_id) {
 // Escapa % e _ para o LIKE.
 const paraLike = (s) => `%${s.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 
-export function buscarMusicas(db, { q = '', filtro = '', artista = '', offset = 0 } = {}) {
+export function buscarMusicas(db, { q = '', filtro = '', artista = '', genero = '', offset = 0 } = {}) {
   const termo = normalizarBusca(q);
   const condicoes = ['fora_do_catalogo = 0'];
   const params = {};
@@ -69,6 +70,11 @@ export function buscarMusicas(db, { q = '', filtro = '', artista = '', offset = 
   if (filtro === 'nacionais') condicoes.push("idioma = 'BRA'");
   else if (filtro === 'internacionais') condicoes.push("idioma <> 'BRA'");
   else if (filtro) throw erro(422, 'filtro_invalido', 'Filtro inválido.');
+  if (genero) {
+    if (!GENEROS.includes(genero)) throw erro(422, 'genero_invalido', 'Gênero inválido.');
+    condicoes.push('artista_principal(artista) IN (SELECT chave FROM generos_artista WHERE genero = @genero)');
+    params.genero = genero;
+  }
   const onde = condicoes.join(' AND ');
 
   // SPEC 5.4: casamento no título, depois artista, depois letra; JAP por último.
@@ -128,6 +134,7 @@ export function rotasPublicas({ db, config, auth, email }) {
       q: String(req.query.q ?? ''),
       filtro: String(req.query.filtro ?? ''),
       artista: String(req.query.artista ?? ''),
+      genero: lerFesta(db).filtro_genero ? String(req.query.genero ?? '') : '', // SPEC 5.7
       offset,
     });
     const naFila = new Set(pessoa
@@ -140,6 +147,12 @@ export function rotasPublicas({ db, config, auth, email }) {
     const filtro = String(req.query.filtro ?? '');
     if (!['', 'nacionais', 'internacionais'].includes(filtro)) throw erro(422, 'filtro_invalido', 'Filtro inválido.');
     res.json({ artistas: listarArtistas(db, { filtro }) });
+  });
+
+  r.get('/generos', (req, res) => {
+    const filtro = String(req.query.filtro ?? '');
+    if (!['', 'nacionais', 'internacionais'].includes(filtro)) throw erro(422, 'filtro_invalido', 'Filtro inválido.');
+    res.json({ generos: lerFesta(db).filtro_genero ? listarGeneros(db, { filtro }) : [] });
   });
 
   // Ranking final por e-mail (SPEC 9.1).

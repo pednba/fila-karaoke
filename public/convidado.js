@@ -10,6 +10,7 @@ const s = {
   aba: 'fila',
   busca: {
     q: '', filtro: '', modo: 'musicas', artista: null, // artista: { nome, chave }
+    genero: '', generos: {}, // generos: cache por filtro (SPEC 5.7)
     musicas: [], total: 0, carregando: false, geracao: 0,
     artistas: {}, mostrarArtistas: PASSO_ARTISTAS, // artistas: cache por filtro
     sugestao: null, sugestaoChave: null,
@@ -153,12 +154,14 @@ function montarFesta() {
           <button type="button" class="pilula" data-filtro="nacionais">Nacionais</button>
           <button type="button" class="pilula" data-filtro="internacionais">Internacionais</button>
         </div>
+        <div class="pilulas" id="generos" hidden></div>
         <div id="resultado-busca" class="pilha"></div>
         <div id="mais-busca" class="sec centro" style="padding: 12px;"></div>
       </div>
       <div class="pilha" data-aba="meus"></div>
       <div class="pilha" data-aba="ranking" style="gap: 16px;">
         <div class="pilha" id="ranking-lista" style="gap: 10px;"></div>
+        <div id="ranking-pix"></div>
         <div id="ranking-email"></div>
       </div>
     </main>
@@ -185,7 +188,16 @@ function montarFesta() {
     if (!b) return;
     s.busca.filtro = b.dataset.filtro;
     if (s.busca.modo === 'artistas') carregarArtistas();
-    else buscar();
+    else {
+      buscar();
+      carregarGeneros();
+    }
+  };
+  $('#generos').onclick = (ev) => {
+    const b = ev.target.closest('[data-genero]');
+    if (!b || b.dataset.genero === s.busca.genero) return;
+    s.busca.genero = b.dataset.genero;
+    buscar();
   };
   // Rolagem infinita: quando o fim da lista aparece, carrega a próxima página.
   new IntersectionObserver((vistos) => {
@@ -197,6 +209,7 @@ function montarFesta() {
   };
   app.onclick = aoClicar;
   buscar();
+  carregarGeneros();
   atualizar();
 }
 
@@ -220,6 +233,7 @@ function atualizar() {
   if (s.aba === 'meus') renderMeus();
   if (s.aba === 'ranking') {
     renderRanking($('#ranking-lista'));
+    renderPix();
     renderEmail();
   }
 }
@@ -323,6 +337,7 @@ async function buscar({ mais = false } = {}) {
   const geracao = mais ? b.geracao : ++b.geracao;
   const params = new URLSearchParams({ q: b.q.trim(), filtro: b.filtro, offset: mais ? b.musicas.length : 0 });
   if (b.artista) params.set('artista', b.artista.chave);
+  if (b.genero) params.set('genero', b.genero);
   b.carregando = true;
   try {
     const r = await api('GET', `/api/musicas?${params}`);
@@ -339,6 +354,37 @@ async function buscar({ mais = false } = {}) {
     renderBusca();
     if (fimVisivel()) carregarMais();
   }
+}
+
+// Chips de gênero: só com o filtro ligado no setup, recarregados quando muda Nacionais/Internacionais.
+async function carregarGeneros() {
+  const b = s.busca;
+  if (!s.festa.filtro_genero) return;
+  const filtro = b.filtro;
+  if (!b.generos[filtro]) {
+    try {
+      b.generos[filtro] = (await api('GET', `/api/generos?filtro=${filtro}`)).generos;
+    } catch {
+      return; // sem chips; a busca continua funcionando
+    }
+  }
+  if (b.filtro !== filtro) return;
+  if (b.genero && !b.generos[filtro].some((g) => g.nome === b.genero)) {
+    b.genero = '';
+    buscar();
+  }
+  renderGeneros();
+}
+
+function renderGeneros() {
+  const b = s.busca;
+  const alvo = $('#generos');
+  const lista = b.generos[b.filtro] ?? [];
+  alvo.hidden = !s.festa.filtro_genero || b.modo !== 'musicas' || !lista.length;
+  if (alvo.hidden) return;
+  alvo.innerHTML = [{ nome: '' }, ...lista]
+    .map((g) => `<button type="button" class="pilula" data-genero="${esc(g.nome)}" aria-pressed="${g.nome === b.genero}">${g.nome ? esc(g.nome) : 'Todos os gêneros'}</button>`)
+    .join('');
 }
 
 async function carregarArtistas() {
@@ -376,6 +422,7 @@ function trocarModo(modo, artista = null) {
   const b = s.busca;
   b.modo = modo;
   b.artista = artista;
+  if (artista) b.genero = '';
   b.q = '';
   $('#busca').value = '';
   $('#busca').placeholder = modo === 'artistas' ? 'Nome do artista' : 'Música, artista ou trecho da letra';
@@ -441,6 +488,7 @@ function renderBusca() {
   const b = s.busca;
   for (const el of app.querySelectorAll('[data-filtro]')) el.setAttribute('aria-pressed', String(el.dataset.filtro === b.filtro));
   for (const el of app.querySelectorAll('[data-modo]')) el.setAttribute('aria-pressed', String(el.dataset.modo === b.modo));
+  renderGeneros();
   atualizarSugestao();
   if (b.modo === 'artistas') return renderArtistas();
 
@@ -605,6 +653,34 @@ async function renderRanking(alvo, final = false) {
       ? `<p class="aviso">O ranking de pessoas aparece quando alguém tiver ${plural(regras.minimo_performances, 'performance', 'performances')} com nota.</p>` : ''}
     ${itens.length ? itens.join('') : '<p class="destaque centro" style="padding: 24px; font-size: 28px;">Nenhuma votação fechada ainda</p>'}
     ${abertas.map((v) => `<p class="aviso" style="margin-top: 4px;">Votação aberta para ${esc(v.cantor)} (${esc(v.titulo)}). Entra no ranking quando a próxima performance terminar.</p>`).join('')}`;
+}
+
+// Prêmio por Pix (SPEC 9.2): só mostra a chave de quem organiza; o app não confere pagamentos.
+function renderPix() {
+  const alvo = $('#ranking-pix');
+  const pix = s.estado.status === 'aberta' ? s.festa.pix : '';
+  if (alvo.dataset.pix === (pix || '') && (alvo.childElementCount || !pix)) return;
+  alvo.dataset.pix = pix || '';
+  if (!pix) {
+    alvo.innerHTML = '';
+    return;
+  }
+  alvo.innerHTML = `
+    <div class="cartao-decor pilha" style="gap: 10px;">
+      <span class="destaque" style="font-size: 22px;">Prêmio de quem ganhar</span>
+      <span>Quem quiser contribuir faz um Pix para quem organiza a festa, que repassa a quem ganhar o ranking.</span>
+      <span class="sec" style="font-size: 13px;">Chave Pix</span>
+      <strong style="overflow-wrap: anywhere;">${esc(pix)}</strong>
+      <button type="button" class="btn btn-pequeno" id="copiar-pix" style="align-self: flex-start;">Copiar</button>
+    </div>`;
+  $('#copiar-pix').onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(pix);
+      avisar('Chave Pix copiada.');
+    } catch {
+      prompt('Copie a chave Pix:', pix);
+    }
+  };
 }
 
 // Ranking por e-mail (SPEC 9.1). Só redesenha quando o e-mail salvo muda, para não apagar o que está sendo digitado.

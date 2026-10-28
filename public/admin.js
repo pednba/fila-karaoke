@@ -263,9 +263,9 @@ function renderFesta() {
   const st = s.estado.status;
   const f = s.festa;
   const itens = [
-    ['festa', 'Dados da festa', 'Nome, título, data, duração, local, contato e convidados'],
+    ['festa', 'Dados da festa', 'Nome, título, data, duração, local, contato, Pix e convidados'],
     ['visual', 'Visual', 'Arte, tema, cor de destaque e fonte'],
-    ['catalogo', 'Catálogo', 'Reimportar a lista de músicas do aparelho'],
+    ['catalogo', 'Catálogo', 'Reimportar a lista de músicas do aparelho e gênero musical'],
     ['regras', 'Regras', 'Pedidos por pessoa, pulos, votação, VIP'],
     ['publicar', 'Link, QR code e cartaz', 'Material para imprimir e compartilhar'],
     ['pin', 'Trocar PIN', 'PIN de acesso a este painel'],

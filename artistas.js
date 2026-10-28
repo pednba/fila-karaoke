@@ -16,6 +16,12 @@ export function chavesArtista(artista) {
   return chaves.length ? `|${chaves.join('|')}|` : '';
 }
 
+// Chave do primeiro participante: é ele que dá o gênero da música (SPEC 5.7).
+export function artistaPrincipal(artista) {
+  const [primeiro] = participantes(artista);
+  return primeiro ? normalizarBusca(primeiro) : '';
+}
+
 // Lista A–Z: [{ nome, chave, total }]. O nome exibido é a grafia mais frequente.
 export function listarArtistas(db, { filtro = '' } = {}) {
   const idioma = filtro === 'nacionais' ? "AND idioma = 'BRA'" : filtro === 'internacionais' ? "AND idioma <> 'BRA'" : '';

@@ -14,6 +14,7 @@ import { montarTema, PRESETS, FONTES } from '../temas.js';
 import { importarArquivo } from '../importadores/index.js';
 import { gravarCatalogo } from '../catalogo.js';
 import { renderizarCartaz } from '../cartaz.js';
+import { classificarLote, resumoGeneros } from '../generos.js';
 
 const MB = 1024 * 1024;
 const LIMITE_ARTE = 5 * MB;
@@ -74,7 +75,7 @@ export function rotasSetup({ db, config, auth }) {
     escrever(db, () =>
       db
         .prepare(`UPDATE festa SET nome_destaque = @nome_destaque, titulo = @titulo, subtitulo = @subtitulo, inicio_em = @inicio_em,
-                  duracao_min = @duracao_min, local = @local, contato = @contato, convidados = @convidados, atualizado_em = datetime('now') WHERE id = 1`)
+                  duracao_min = @duracao_min, local = @local, contato = @contato, pix = @pix, convidados = @convidados, atualizado_em = datetime('now') WHERE id = 1`)
         .run(d)
     );
     const festa = lerFesta(db);
@@ -145,6 +146,27 @@ export function rotasSetup({ db, config, auth }) {
     const resultado = gravarCatalogo(db, { musicas: previa.musicas, origem: previa.origem, statusFesta: lerFesta(db).status, confirmar: confirmar === true });
     previas.delete(token);
     res.json(resultado);
+  });
+
+  // Passo 4: gênero musical (SPEC 5.7). A chave da API chega no corpo e não é guardada.
+  const resumo = () => ({ ...resumoGeneros(db), ativo: Boolean(lerFesta(db).filtro_genero) });
+  r.get('/generos', (req, res) => res.json(resumo()));
+
+  r.post('/generos/classificar', async (req, res) => {
+    const { feitos, restantes } = await classificarLote(db, { chave: req.body?.chave, fetch: config.fetch }); // config.fetch: só nos testes
+    res.json({ feitos, restantes, resumo: resumo() });
+  });
+
+  r.put('/generos', (req, res) => {
+    const { ativo } = req.body ?? {};
+    if (typeof ativo !== 'boolean') throw erro(422, 'valor_invalido', 'Informe se o filtro de gênero fica ligado.');
+    escrever(db, () => db.prepare("UPDATE festa SET filtro_genero = ?, atualizado_em = datetime('now') WHERE id = 1").run(ativo ? 1 : 0));
+    res.json(resumo());
+  });
+
+  r.delete('/generos', (req, res) => {
+    escrever(db, () => db.exec("DELETE FROM generos_artista; UPDATE festa SET filtro_genero = 0, atualizado_em = datetime('now') WHERE id = 1;"));
+    res.json(resumo());
   });
 
   // Passo 5.

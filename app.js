@@ -13,7 +13,7 @@ import { rotasPublicas } from './rotas/publico.js';
 import { criarEnvioRanking, transporteSmtp } from './email.js';
 import { criarMaquina } from './maquina.js';
 
-// config: { dataDir, publicUrl, setupToken, cookieSecret, cookiesSeguros, smtp?, transporteEmail?, maquinaToken? }
+// config: { dataDir, publicUrl, setupToken, cookieSecret, cookiesSeguros, smtp?, transporteEmail?, maquinaToken?, fetch? }
 export function criarApp({ db, config }) {
   garantirFesta(db);
   const auth = criarAuth({ config, lerPinHash: () => lerFesta(db).admin_pin_hash });

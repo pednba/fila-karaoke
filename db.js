@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import Database from 'better-sqlite3';
 import { normalizar, normalizarBusca } from './texto.js';
-import { chavesArtista } from './artistas.js';
+import { chavesArtista, artistaPrincipal } from './artistas.js';
 
 // Cada item é uma migração; o índice + 1 é o PRAGMA user_version após aplicá-la.
 // Nunca editar uma migração já publicada: acrescentar uma nova no fim.
@@ -89,6 +89,17 @@ const MIGRACOES = [
   `
   ALTER TABLE festa ADD COLUMN contato TEXT NOT NULL DEFAULT '';
   `,
+  // Chave Pix do prêmio (SPEC 9.2) e gênero musical por artista (SPEC 5.7).
+  `
+  ALTER TABLE festa ADD COLUMN pix TEXT NOT NULL DEFAULT '';
+  ALTER TABLE festa ADD COLUMN filtro_genero INTEGER NOT NULL DEFAULT 0;
+  CREATE TABLE generos_artista (
+    chave     TEXT PRIMARY KEY,
+    genero    TEXT NOT NULL DEFAULT '',
+    confianca TEXT NOT NULL,
+    origem    TEXT NOT NULL
+  );
+  `,
 ];
 
 export function migrar(db) {
@@ -110,6 +121,7 @@ export function abrirBanco(arquivo = path.join(process.env.DATA_DIR || './data',
   db.function('normalizar', { deterministic: true }, normalizar);
   db.function('normalizar_busca', { deterministic: true }, normalizarBusca); // ordenação da busca (SPEC 5.4)
   db.function('artistas_busca', { deterministic: true }, chavesArtista); // filtro por artista (SPEC 5.5)
+  db.function('artista_principal', { deterministic: true }, artistaPrincipal); // gênero da música (SPEC 5.7)
   migrar(db);
   return db;
 }

@@ -11,7 +11,8 @@ const PASSOS = [
   ['publicar', 'Publicar'],
 ];
 const CHAVE_TOKEN = 'fila-karaoke:setup-token';
-const s = { setup: null, passo: 'pin', previa: null, visual: null };
+// chaveApi (SPEC 5.7): só em memória, nunca em sessionStorage.
+const s = { setup: null, passo: 'pin', previa: null, visual: null, generos: null, chaveApi: '', classificando: false, parar: false };
 
 function lerToken() {
   try {
@@ -226,6 +227,9 @@ function passoFesta() {
       <div class="campo"><label for="contato">Seu contato (opcional)</label>
         <input id="contato" name="contato" class="entrada" maxlength="120" value="${esc(f.contato)}" placeholder="E-mail ou telefone">
         <span class="sec">Aparece na página de privacidade, para quem quiser falar sobre os próprios dados.</span></div>
+      <div class="campo"><label for="pix">Chave Pix para o prêmio (opcional)</label>
+        <input id="pix" name="pix" class="entrada" maxlength="77" autocomplete="off" value="${esc(f.pix)}" placeholder="E-mail, telefone, CPF ou chave aleatória">
+        <span class="sec">Com a votação ligada, aparece na aba Ranking: quem quiser contribuir para o prêmio de quem ganhar faz um Pix para você. O app não confere pagamentos.</span></div>
       <div class="campo"><label for="convidados">Convidados (estimativa)</label>
         <input id="convidados" name="convidados" class="entrada" type="number" min="1" max="1000" step="1" inputmode="numeric" required value="${f.convidados ?? ''}"></div>
       <span class="erro-campo erro-form" hidden></span>
@@ -241,6 +245,7 @@ function passoFesta() {
       duracao_horas: Number(String(d.get('duracao_horas')).replace(',', '.')),
       local: d.get('local'),
       contato: d.get('contato'),
+      pix: d.get('pix'),
       convidados: Number(d.get('convidados')),
     });
   });
@@ -444,7 +449,12 @@ function passoCatalogo() {
           <button type="submit" class="btn">Confirmar importação</button>
         </div>` : '<span class="erro-campo erro-form" hidden></span>'}
       ${!p && catalogo.total ? '<button type="button" class="btn btn-grande" id="seguir">Continuar</button>' : ''}
-    </form>`;
+    </form>
+    ${!p && catalogo.total ? '<section class="pilha" id="generos" style="margin-top: 12px;"></section>' : ''}`;
+  if (!p && catalogo.total) {
+    if (s.classificando) renderGeneros();
+    else carregarGeneros();
+  }
 
   const form = $('#form');
   $('#arquivo').onchange = async (ev) => {
@@ -497,6 +507,135 @@ function passoCatalogo() {
     }
     s.previa = null;
   });
+}
+
+// ---------- 4. Gênero musical (SPEC 5.7) ----------
+
+const pct = (x) => `${Math.round(x * 100)}%`;
+
+async function carregarGeneros() {
+  renderGeneros();
+  try {
+    s.generos = await api('GET', '/api/setup/generos');
+  } catch (e) {
+    return avisar(e.message);
+  }
+  if (s.passo === 'catalogo') renderGeneros();
+}
+
+function resultadoGeneros(g) {
+  const linha = (rotulo, { artistas, musicas }) =>
+    `<tr><td>${rotulo}</td><td>${plural(artistas, 'artista', 'artistas')} · ${plural(musicas, 'música', 'músicas')}</td></tr>`;
+  return `
+    <section class="cartao-decor pilha">
+      <h3 class="rotulo" style="font-size: 12px;">Resultado da classificação</h3>
+      <table class="tabela">
+        <tr><td>Precisão estimada</td><td><strong>${g.precisao_estimada == null ? '–' : pct(g.precisao_estimada)}</strong></td></tr>
+        <tr><td>Músicas com gênero</td><td>${pct(g.cobertura)} de ${g.musicas}</td></tr>
+        ${linha('Confiança alta', g.por_confianca.alta)}
+        ${linha('Confiança média', g.por_confianca.media)}
+        ${linha('Confiança baixa', g.por_confianca.baixa)}
+        ${g.desconhecidos.artistas ? linha('Desconhecidos (sem gênero)', g.desconhecidos) : ''}
+        ${g.pendentes ? `<tr><td>Ainda sem classificar</td><td>${plural(g.pendentes, 'artista', 'artistas')}</td></tr>` : ''}
+      </table>
+      <p class="sec" style="font-size: 13px; line-height: 1.4;">A precisão é uma estimativa a partir da confiança que o próprio modelo declarou (alta = 95%, média = 75%, baixa = 50%), ponderada pelo número de músicas. Não é uma conferência música a música.</p>
+      ${g.por_genero.length ? `
+        <span class="sec">Músicas por gênero</span>
+        <table class="tabela">${g.por_genero.map((x) => `<tr><td>${esc(x.nome)}</td><td>${x.total}</td></tr>`).join('')}</table>` : ''}
+      ${g.amostra_baixa.length ? `
+        <span class="sec">Amostra de confiança baixa (confira se faz sentido):</span>
+        <pre class="amostra">${g.amostra_baixa.map((x) => `${esc(x.nome)} → ${esc(x.genero)}`).join('\n')}</pre>` : ''}
+      <label class="interruptor"><span>Mostrar o filtro por gênero aos convidados</span><input type="checkbox" id="ligar-generos" ${g.ativo ? 'checked' : ''} ${s.classificando ? 'disabled' : ''}></label>
+      <button type="button" class="btn btn-claro" id="apagar-generos" ${s.classificando ? 'disabled' : ''}>Apagar classificação</button>
+    </section>`;
+}
+
+function renderGeneros() {
+  const alvo = $('#generos');
+  if (!alvo) return;
+  const g = s.generos;
+  const cabeca = titulo('Gênero musical (opcional)', 'O arquivo do aparelho não traz gênero. Com uma chave de API da Anthropic, o Claude classifica os artistas e você decide se os convidados podem filtrar o catálogo por gênero.');
+  if (!g) {
+    alvo.innerHTML = `${cabeca}<span class="sec">Carregando…</span>`;
+    return;
+  }
+  const feitos = g.artistas - g.pendentes;
+  alvo.innerHTML = `
+    ${cabeca}
+    ${g.pendentes ? `
+      <form class="pilha" id="form-generos" novalidate>
+        <div class="campo"><label for="chave">Chave de API da Anthropic</label>
+          <input id="chave" name="chave" class="entrada" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…" value="${esc(s.chaveApi)}" ${s.classificando ? 'disabled' : ''}>
+          <span class="sec">A chave não é guardada: vai para a Anthropic a cada lote e some quando você fechar esta página. Só os nomes dos artistas são enviados. Custo estimado: cerca de US$ 1 a cada mil artistas, cobrado na sua conta da Anthropic.</span></div>
+        ${s.classificando ? `<p class="aviso">Classificando… ${feitos} de ${g.artistas} artistas. Pode levar alguns minutos.</p>` : ''}
+        <span class="erro-campo erro-form" hidden></span>
+        ${s.classificando
+          ? '<button type="button" class="btn btn-claro" id="parar-generos">Parar depois deste lote</button>'
+          : `<button type="submit" class="btn">${feitos ? `Classificar ${plural(g.pendentes, 'artista que falta', 'artistas que faltam')}` : `Classificar ${plural(g.artistas, 'artista', 'artistas')}`}</button>`}
+      </form>` : ''}
+    ${feitos ? resultadoGeneros(g) : ''}`;
+
+  const form = $('#form-generos');
+  if (form) {
+    $('#chave').oninput = (ev) => (s.chaveApi = ev.target.value.trim());
+    form.onsubmit = (ev) => {
+      ev.preventDefault();
+      classificarGeneros();
+    };
+  }
+  $('#parar-generos')?.addEventListener('click', (ev) => {
+    s.parar = true;
+    ev.target.disabled = true;
+  });
+  $('#ligar-generos')?.addEventListener('change', async (ev) => {
+    const ativo = ev.target.checked;
+    try {
+      s.generos = await api('PUT', '/api/setup/generos', { ativo });
+      avisar(ativo ? 'Filtro por gênero ligado.' : 'Filtro por gênero desligado.');
+    } catch (e) {
+      ev.target.checked = !ativo;
+      avisar(e.message);
+    }
+  });
+  $('#apagar-generos')?.addEventListener('click', async () => {
+    if (!confirm('Apagar a classificação de gênero? O filtro por gênero também é desligado.')) return;
+    try {
+      s.generos = await api('DELETE', '/api/setup/generos');
+      renderGeneros();
+    } catch (e) {
+      avisar(e.message);
+    }
+  });
+}
+
+// Repete os lotes até acabar, dar erro ou a pessoa pedir para parar.
+async function classificarGeneros() {
+  s.classificando = true;
+  s.parar = false;
+  renderGeneros();
+  let falha = null;
+  try {
+    while (!s.parar) {
+      const r = await api('POST', '/api/setup/generos/classificar', { chave: s.chaveApi });
+      s.generos = r.resumo;
+      if (!r.restantes) break;
+      if (!r.feitos) {
+        falha = new Error('O lote voltou sem nenhum artista classificado. Tente de novo.');
+        break;
+      }
+      renderGeneros();
+    }
+  } catch (e) {
+    falha = e;
+  } finally {
+    s.classificando = false;
+  }
+  if (s.passo !== 'catalogo') return falha && avisar(falha.message);
+  renderGeneros();
+  const form = $('#form-generos');
+  if (falha && form) mostrarErro(form, falha);
+  else if (falha) avisar(falha.message);
+  else if (!s.generos.pendentes) avisar('Pronto! Confira o resultado e decida se liga o filtro.');
 }
 
 // ---------- 5. Regras ----------
@@ -573,10 +712,12 @@ function passoPublicar() {
         <tr><td>Duração</td><td>${f.duracao_min ? formatarDuracao(f.duracao_min) : '–'}</td></tr>
         ${f.local ? `<tr><td>Local</td><td>${esc(f.local)}</td></tr>` : ''}
         ${f.contato ? `<tr><td>Contato</td><td>${esc(f.contato)}</td></tr>` : ''}
+        ${f.pix ? `<tr><td>Chave Pix do prêmio</td><td>${esc(f.pix)}</td></tr>` : ''}
         <tr><td>Convidados</td><td>${f.convidados ?? '–'}</td></tr>
         <tr><td>Tema</td><td>${esc(preset?.nome ?? f.tema.preset)} · ${esc(f.tema.fonte)}${f.tema.destaque ? ` · ${esc(f.tema.destaque)}` : ''}</td></tr>
         <tr><td>Arte</td><td>${f.arte_url ? 'enviada' : 'sem arte'}</td></tr>
         <tr><td>Catálogo</td><td>${plural(st.catalogo.total, 'música', 'músicas')}</td></tr>
+        <tr><td>Filtro por gênero</td><td>${f.filtro_genero ? 'ligado' : 'desligado'}</td></tr>
         <tr><td>Pedidos por pessoa</td><td>${r.pendentes_por_pessoa}</td></tr>
         <tr><td>Pulos até sair</td><td>${r.pulos_ate_sair}</td></tr>
         <tr><td>Votação</td><td>${r.votacao ? `ligada · mínimo de ${plural(r.minimo_votos, 'voto', 'votos')}` : 'desligada'}</td></tr>

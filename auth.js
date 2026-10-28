@@ -82,5 +82,15 @@ export function criarAuth({ config, lerPinHash }) {
     next();
   }
 
-  return { emitirCookieAdmin, ehAdmin, exigirAdmin, exigirSetup, limitarLogin };
+  // Token de entrada do app da Tela de Início (SPEC 9.3): leva o kid, assinado com COOKIE_SECRET.
+  const assinarKid = (kid) => crypto.createHmac('sha256', config.cookieSecret).update(`entrar:${kid}`).digest('base64url').slice(0, 32);
+  const tokenEntrada = (kid) => `${kid}.${assinarKid(kid)}`;
+  function kidDoToken(token) {
+    if (typeof token !== 'string' || token.length > 200) return null;
+    const i = token.lastIndexOf('.');
+    const kid = token.slice(0, i);
+    return i > 0 && iguais(token.slice(i + 1), assinarKid(kid)) ? kid : null;
+  }
+
+  return { emitirCookieAdmin, ehAdmin, exigirAdmin, exigirSetup, limitarLogin, tokenEntrada, kidDoToken };
 }

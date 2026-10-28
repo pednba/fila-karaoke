@@ -134,7 +134,7 @@ export function pular(db, { agora = Date.now() } = {}) {
     db.prepare("UPDATE pedidos SET status = 'removido', pulos = ?, votacao_aberta = 0, finalizado_em = datetime('now') WHERE id = ?")
       .run(decisao.pulos, atual.id);
   } else {
-    db.prepare("UPDATE pedidos SET status = 'pendente', pulos = ?, t_fila = ?, ordem_manual = NULL, votacao_aberta = 0, na_vez_em = NULL WHERE id = ?")
+    db.prepare("UPDATE pedidos SET status = 'pendente', pulos = ?, t_fila = ?, ordem_manual = NULL, votacao_aberta = 0, na_vez_em = NULL, avisado = 0 WHERE id = ?")
       .run(decisao.pulos, decisao.t_fila, atual.id);
   }
   avancar(db, festa);

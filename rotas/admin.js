@@ -7,13 +7,14 @@ import { escrever, lerVersao } from '../db.js';
 import { lerFesta } from '../festa.js';
 import { normalizar } from '../texto.js';
 import { validarNome } from './publico.js';
+import { validarTextoAviso } from '../push.js';
 import {
   pedidoNaVez, filaOrdenada, pedir, cantou, pular, moverPedido, marcarBypass, marcarVip, votacoesAbertas,
 } from '../operacao.js';
 
 const idDe = (req) => Number(req.params.id);
 
-export function rotasAdmin({ db, auth, maquina }) {
+export function rotasAdmin({ db, auth, maquina, push }) {
   const r = express.Router();
 
   r.post('/login', auth.limitarLogin, (req, res) => {
@@ -62,6 +63,19 @@ export function rotasAdmin({ db, auth, maquina }) {
   r.patch('/pedidos/:id', (req, res) => {
     escrever(db, () => marcarBypass(db, { id: idDe(req), bypass: req.body?.bypass }));
     res.json({ ok: true });
+  });
+
+  // Mensagem para os convidados (SPEC 9.3): push para todos e janela no app por 15 minutos.
+  r.post('/avisos', (req, res) => {
+    if (lerFesta(db).status !== 'aberta') throw erro(403, 'festa_fechada', 'A festa não está aberta.');
+    const texto = validarTextoAviso(req.body?.texto);
+    const aviso = escrever(db, () => {
+      const { lastInsertRowid } = db.prepare('INSERT INTO avisos (texto) VALUES (?)').run(texto);
+      return { id: Number(lastInsertRowid), texto };
+    });
+    const inscricoes = db.prepare('SELECT COUNT(*) FROM inscricoes_push').pluck().get();
+    push?.enviarAviso(aviso).catch((e) => console.error(e));
+    res.status(201).json({ aviso, inscricoes });
   });
 
   r.get('/pessoas', (req, res) => {
@@ -127,5 +141,9 @@ export function estadoAdmin(db) {
     fila: fila.map(pedidoAdmin),
     votacoes: festa.regras.votacao ? votacoesAbertas(db).map(({ meu, meu_voto, ...v }) => v) : [],
     regras: festa.regras,
+    avisos: {
+      inscritos: contar('SELECT COUNT(DISTINCT pessoa_id) FROM inscricoes_push'),
+      ultimo: db.prepare('SELECT id, texto, criado_em FROM avisos ORDER BY id DESC LIMIT 1').get() ?? null,
+    },
   };
 }

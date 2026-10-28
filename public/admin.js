@@ -181,6 +181,17 @@ function renderOperacao() {
       </div>`;
   }).join('');
 
+  const recadoDigitado = $('#recado')?.value ?? '';
+  const ultimo = e.avisos?.ultimo;
+  const recado = `
+    <section class="cartao-decor pilha" style="gap: 10px; border-radius: 16px; padding: 14px;" aria-label="Mensagem para os convidados">
+      <h2 class="rotulo" style="font-size: 13px;">Mensagem para os convidados</h2>
+      <p class="sec" style="line-height: 1.4;">Aparece em janela para quem estiver com o app aberto ou abrir nos próximos 15 minutos${s.festa.push_chave ? ` e chega como notificação para ${plural(e.avisos?.inscritos ?? 0, 'pessoa com avisos ligados', 'pessoas com avisos ligados')}` : ''}.</p>
+      <textarea id="recado" class="entrada" style="height: auto; min-height: 76px; padding: 12px 16px; background: var(--fundo);" maxlength="200" rows="3" placeholder="Ex.: Hora do parabéns! Todos para o salão." ${fechada ? 'disabled' : ''}></textarea>
+      <button type="button" class="btn" data-acao="recado" style="align-self: flex-start;" ${fechada ? 'disabled' : ''}>Enviar para todos</button>
+      ${ultimo ? `<p class="sec" style="overflow-wrap: anywhere;">Última: “${esc(ultimo.texto)}” às ${esc(new Date(`${ultimo.criado_em.replace(' ', 'T')}Z`).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }))}</p>` : ''}
+    </section>`;
+
   const nomeDigitado = $('#add-nome')?.value ?? '';
   const qDigitada = $('#add-q')?.value ?? '';
   const focado = document.activeElement?.id;
@@ -196,6 +207,7 @@ function renderOperacao() {
       <div class="filete"><span class="rotulo-p">Agora no palco</span></div>
       ${palco}
     </section>
+    ${recado}
     <section class="pilha" style="gap: 8px;" aria-label="Fila completa">
       <div class="cabeca-filete"><h2>Fila</h2><span class="traco"></span>${icone()}</div>
       ${fila || '<p class="sec centro" style="padding: 12px;">Ninguém esperando.</p>'}
@@ -216,9 +228,10 @@ function renderOperacao() {
       <div id="add-resultados"></div>
     </section>`;
 
+  $('#recado').value = recadoDigitado;
   $('#add-nome').value = nomeDigitado;
   $('#add-q').value = qDigitada;
-  if (focado === 'add-nome' || focado === 'add-q') $(`#${focado}`).focus();
+  if (['recado', 'add-nome', 'add-q'].includes(focado)) $(`#${focado}`).focus();
   renderBuscaAdmin();
 }
 
@@ -354,6 +367,13 @@ async function aoClicar(ev) {
       avisar(`${b.dataset.titulo} para ${r.pedido.cantor}: ${r.posicao_estimada === 0 ? 'já está no palco.' : `${r.posicao_estimada}º na fila.`}`, { baixo: true });
       $('#add-q').value = '';
       s.busca = [];
+    } else if (acao === 'recado') {
+      const texto = $('#recado').value.trim();
+      if (!texto) return $('#recado').focus();
+      if (!confirm(`Enviar para todos os convidados?\n\n“${texto}”`)) return;
+      const r = await api('POST', '/api/admin/avisos', { texto });
+      $('#recado').value = '';
+      avisar(s.festa.push_chave ? `Mensagem enviada. Notificação para ${plural(r.inscricoes, 'aparelho', 'aparelhos')}.` : 'Mensagem enviada.', { baixo: true });
     } else if (acao === 'encerrar') {
       if (!confirm('Encerrar a festa? Pedidos e votos ficam bloqueados e os convidados passam a ver o ranking final.')) return;
       await api('POST', '/api/festa/encerrar');

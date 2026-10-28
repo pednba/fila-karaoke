@@ -86,6 +86,13 @@ select.entrada { appearance: auto; }
 .aviso { padding: 10px 12px; border-radius: 10px; background: var(--realce); font-size: 13px; line-height: 1.4; }
 .aviso-alerta { background: var(--alerta-fundo); color: var(--alerta); }
 
+/* Janela de recado (SPEC 9.3) */
+.janela {
+  width: min(420px, calc(100% - 32px)); border: 1px solid var(--decor); border-radius: 18px;
+  background: var(--superficie); color: var(--texto); padding: 24px 20px;
+}
+.janela::backdrop { background: color-mix(in srgb, var(--palco) 60%, transparent); }
+
 /* Cartões */
 .cartao { background: var(--superficie); border: 1px solid var(--borda); border-radius: 12px; padding: 12px; }
 .cartao-decor { background: var(--superficie); border: 1px solid var(--decor); border-radius: 18px; padding: 16px; }

@@ -6,7 +6,7 @@ import { erro } from '../erros.js';
 import { escrever } from '../db.js';
 import { estadoSetup, lerFesta, arquivarFesta } from '../festa.js';
 
-export function rotasFesta({ db, config, auth, email }) {
+export function rotasFesta({ db, config, auth, email, push }) {
   const r = express.Router();
 
   // Dados públicos (SPEC 10.2).
@@ -30,6 +30,7 @@ export function rotasFesta({ db, config, auth, email }) {
       regras: { pendentes_por_pessoa, minutos_por_musica, votacao, ranking_pessoas, minimo_votos, minimo_performances },
       admin_configurado: Boolean(f.admin_pin_hash), // /admin decide entre login e setup
       email_ranking: Boolean(email?.ativo && votacao), // SPEC 9.1
+      push_chave: push?.chavePublica ?? null, // avisos por notificação (SPEC 9.3)
     });
   });
 

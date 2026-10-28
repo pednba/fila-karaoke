@@ -10,6 +10,7 @@ import { liberadoParaCantou } from '../fila.js';
 import { listarArtistas, sugerir } from '../artistas.js';
 import { validarEmail } from '../email.js';
 import { GENEROS, listarGeneros } from '../generos.js';
+import { validarInscricao, avisoVigente } from '../push.js';
 import {
   pedidoNaVez, filaOrdenada, pedir, cancelar, cantou, votar, votacoesAbertas, ranking,
 } from '../operacao.js';
@@ -96,7 +97,7 @@ function validadeKid(festa) {
   return new Date(Math.max(Number.isNaN(fim) ? 0 : fim, Date.now() + DIA_MS));
 }
 
-export function rotasPublicas({ db, config, auth, email }) {
+export function rotasPublicas({ db, config, auth, email, push }) {
   const r = express.Router();
   const comPessoa = exigirPessoa(db);
 
@@ -116,6 +117,34 @@ export function rotasPublicas({ db, config, auth, email }) {
     }
     res.cookie('kid', id, { httpOnly: true, sameSite: 'lax', secure: config.cookiesSeguros, expires: validadeKid(festa) });
     res.status(201).json({ me: { nome } });
+  });
+
+  // App da Tela de Início (SPEC 9.3): não enxerga o cookie do Safari, então entra pelo token.
+  r.get('/me/entrada', comPessoa, (req, res) => {
+    res.set('Cache-Control', 'no-store').json({ token: auth.tokenEntrada(req.pessoa.id) });
+  });
+  r.post('/entrar', (req, res) => {
+    const kid = auth.kidDoToken(req.body?.token);
+    const pessoa = kid && db.prepare('SELECT id, nome FROM pessoas WHERE id = ?').get(kid);
+    if (!pessoa) throw erro(401, 'token_invalido', 'Esse link de entrada não vale mais. Entre com seu nome.');
+    res.cookie('kid', pessoa.id, { httpOnly: true, sameSite: 'lax', secure: config.cookiesSeguros, expires: validadeKid(lerFesta(db)) });
+    res.json({ me: { nome: pessoa.nome } });
+  });
+
+  // Avisos por notificação (SPEC 9.3).
+  r.put('/me/push', comPessoa, (req, res) => {
+    if (!push?.ativo) throw erro(404, 'push_desligado', 'Os avisos por notificação não estão disponíveis.');
+    if (lerFesta(db).status !== 'aberta') throw erro(403, 'festa_fechada', 'A festa não está aberta.');
+    const i = validarInscricao(req.body);
+    escrever(db, () => db.prepare(`
+      INSERT INTO inscricoes_push (endpoint, pessoa_id, p256dh, auth) VALUES (?, ?, ?, ?)
+      ON CONFLICT(endpoint) DO UPDATE SET pessoa_id = excluded.pessoa_id, p256dh = excluded.p256dh, auth = excluded.auth`)
+      .run(i.endpoint, req.pessoa.id, i.p256dh, i.auth));
+    res.json({ ok: true });
+  });
+  r.delete('/me/push', comPessoa, (req, res) => {
+    escrever(db, () => db.prepare('DELETE FROM inscricoes_push WHERE endpoint = ? AND pessoa_id = ?').run(String(req.body?.endpoint ?? ''), req.pessoa.id));
+    res.status(204).end();
   });
 
   // Polling (SPEC 10.1): ETag "<versao>-<pessoa>"; nada mudou → 304.
@@ -258,5 +287,6 @@ export function estadoPublico(db, pessoa) {
     meus_pedidos,
     votacoes: festa.regras.votacao ? votacoesAbertas(db, me) : [],
     limite: { maximo: festa.regras.pendentes_por_pessoa, ativos },
+    aviso: festa.status === 'aberta' ? avisoVigente(db) : null, // SPEC 9.3
   };
 }

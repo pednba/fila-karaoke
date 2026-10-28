@@ -108,6 +108,22 @@ const MIGRACOES = [
   `
   ALTER TABLE festa ADD COLUMN pix_mensagem TEXT NOT NULL DEFAULT '';
   `,
+  // Avisos por notificação (SPEC 9.3).
+  `
+  CREATE TABLE inscricoes_push (
+    endpoint  TEXT PRIMARY KEY,
+    pessoa_id TEXT NOT NULL REFERENCES pessoas(id) ON DELETE CASCADE,
+    p256dh    TEXT NOT NULL,
+    auth      TEXT NOT NULL,
+    criado_em TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE TABLE avisos (
+    id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    texto     TEXT NOT NULL,
+    criado_em TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  ALTER TABLE pedidos ADD COLUMN avisado INTEGER NOT NULL DEFAULT 0;
+  `,
 ];
 
 export function migrar(db) {

@@ -12,6 +12,7 @@ import { rotasAdmin } from './rotas/admin.js';
 import { rotasPublicas } from './rotas/publico.js';
 import { criarEnvioRanking, transporteSmtp } from './email.js';
 import { criarMaquina } from './maquina.js';
+import { criarPush } from './push.js';
 
 // config: { dataDir, publicUrl, setupToken, cookieSecret, cookiesSeguros, smtp?, transporteEmail?, maquinaToken?, fetch? }
 export function criarApp({ db, config }) {
@@ -27,7 +28,10 @@ export function criarApp({ db, config }) {
   // Se o app caiu no meio de um envio, termina ao subir de novo.
   if (email.ativo && lerFesta(db).status === 'encerrada') setImmediate(() => email.enviarRankings());
   const maquina = criarMaquina({ db, token: config.maquinaToken });
-  const ctx = { db, config, auth, email, maquina };
+  const push = criarPush({ db, config });
+  // Aviso de "sua música é a próxima" (SPEC 9.3): confere a fila a cada 2 s, só quando algo mudou.
+  if (push.ativo) setInterval(() => push.verificarProxima().catch((e) => console.error(e)), 2000).unref();
+  const ctx = { db, config, auth, email, maquina, push };
 
   const app = express();
   app.set('trust proxy', 'loopback'); // Caddy na frente
@@ -45,6 +49,16 @@ export function criarApp({ db, config }) {
   app.get('/tema.css', (req, res) => {
     const { tema } = lerFesta(db);
     res.type('text/css').set('Cache-Control', 'no-cache').send(`@import url("${URL_FONTES}");\n${cssDoTema(tema)}\n`);
+  });
+  // Para adicionar à Tela de Início (SPEC 9.3). Sem start_url: o app abre no endereço de quando foi adicionado.
+  app.get('/manifest.webmanifest', (req, res) => {
+    const { titulo, tema } = lerFesta(db);
+    const nome = titulo || 'Karaokê';
+    const cor = tema?.tokens?.fundo;
+    res.type('application/manifest+json').set('Cache-Control', 'no-cache').json({
+      name: nome, short_name: nome.slice(0, 20), display: 'standalone', lang: 'pt-BR',
+      ...(cor ? { background_color: cor, theme_color: cor } : {}),
+    });
   });
   app.use(express.static(fileURLToPath(new URL('./public', import.meta.url)), { extensions: ['html'] }));
 

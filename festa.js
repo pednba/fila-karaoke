@@ -137,6 +137,7 @@ export async function arquivarFesta(db, dataDir, { manterCatalogo = true } = {})
   let destino = path.join(pasta, `${base}.db`);
   for (let n = 2; fs.existsSync(destino); n++) destino = path.join(pasta, `${base}-${n}.db`);
   db.prepare('UPDATE pessoas SET email = NULL').run(); // e-mail não vai para o arquivo (SPEC 9.1)
+  db.exec('DELETE FROM inscricoes_push; DELETE FROM avisos;'); // nem os endereços de notificação (SPEC 9.3)
   await db.backup(destino);
 
   escrever(db, () => {

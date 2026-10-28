@@ -1,5 +1,8 @@
 // Tela do convidado (SPEC 12): entrada, Fila, Catálogo, Pedidos, Ranking, preparação e encerrada.
 import { $, esc, api, vigiar, avisar, icone, filete, definirIcone, plural, dividirTitulo, MICROFONE, LUPA } from './comum.js';
+import {
+  pedirPermissao, inscrever, cartaoDesejado, dispensar, entrarPeloToken, prepararTelaDeInicio, avisoNovo, marcarVisto,
+} from './avisos.js';
 
 const app = $('#app');
 const PASSO_ARTISTAS = 80;
@@ -8,6 +11,7 @@ const s = {
   estado: null,
   tela: null, // rascunho | entrada | festa | encerrada
   aba: 'fila',
+  inscricaoConferida: false, // avisos por notificação (SPEC 9.3)
   busca: {
     q: '', filtro: '', modo: 'musicas', artista: null, // artista: { nome, chave }
     genero: '', generos: {}, // generos: cache por filtro (SPEC 5.7)
@@ -43,6 +47,35 @@ async function aoEstado(estado) {
   } else {
     atualizar();
   }
+  if (tela === 'festa') {
+    mostrarAviso(estado.aviso);
+    // Quem já permitiu: confere a inscrição uma vez por visita (cookie novo, chave nova).
+    if (!s.inscricaoConferida) {
+      s.inscricaoConferida = true;
+      inscrever(s.festa.push_chave).catch(() => {});
+    }
+  }
+}
+
+// Mensagem de quem organiza (SPEC 9.3): janela uma vez por aparelho.
+function mostrarAviso(aviso) {
+  if (!avisoNovo(aviso)) return;
+  marcarVisto(aviso);
+  let janela = $('#janela-aviso');
+  if (!janela) {
+    janela = document.createElement('dialog');
+    janela.id = 'janela-aviso';
+    janela.className = 'janela';
+    document.body.append(janela);
+  }
+  janela.innerHTML = `
+    <form method="dialog" class="pilha centro" style="gap: 14px;">
+      <p class="rotulo">${esc(s.festa.titulo || 'Recado')}</p>
+      ${filete()}
+      <p class="destaque" style="font-size: 30px; white-space: pre-line; overflow-wrap: anywhere;">${esc(aviso.texto)}</p>
+      <button class="btn btn-grande">OK</button>
+    </form>`;
+  if (!janela.open) janela.showModal();
 }
 
 // ---------- Montagem por tela ----------
@@ -101,8 +134,10 @@ function montarEntrada() {
     }
     const botao = ev.submitter;
     botao.disabled = true;
+    const permissao = pedirPermissao(s.festa.push_chave); // ainda dentro do toque (SPEC 9.3)
     try {
       await api('POST', '/api/pessoas', { nome });
+      permissao.then((p) => p === 'granted' && inscrever(s.festa.push_chave)).catch(() => {});
       s.aba = 'busca';
       await poll.agora();
     } catch (e) {
@@ -253,6 +288,25 @@ function botaoTerminou(a) {
   return `<button type="button" class="btn btn-palco-claro btn-pequeno" style="margin-top: 12px; width: 100%;" data-acao="terminou" data-id="${a.id}" data-cantor="${esc(a.cantor)}">${esc(a.cantor)} já terminou?</button>`;
 }
 
+// "Ativar avisos" ou, no Safari do iPhone, como adicionar à Tela de Início (SPEC 9.3).
+function cartaoAvisos() {
+  const tipo = cartaoDesejado(s.festa.push_chave);
+  if (!tipo) return '';
+  if (tipo === 'iphone') prepararTelaDeInicio();
+  const texto = tipo === 'iphone'
+    ? 'No iPhone, os avisos só chegam com o app na Tela de Início: toque em Compartilhar e depois em <strong>Adicionar à Tela de Início</strong>. Abra por lá e permita as notificações.'
+    : 'Receba um aviso quando sua música for a próxima e os recados da festa, como a hora do parabéns.';
+  return `
+    <section class="cartao-decor pilha" style="gap: 10px;" aria-label="Avisos">
+      <span class="titulo-item">Avisos no celular</span>
+      <span class="sec" style="font-size: 14px; line-height: 1.4;">${texto}</span>
+      <div class="linha" style="display: flex; gap: 8px; flex-wrap: wrap;">
+        ${tipo === 'ativar' ? '<button type="button" class="btn btn-pequeno" data-acao="ativar-avisos">Ativar avisos</button>' : ''}
+        <button type="button" class="btn btn-claro btn-pequeno" data-acao="dispensar-avisos">${tipo === 'ativar' ? 'Agora não' : 'Entendi'}</button>
+      </div>
+    </section>`;
+}
+
 function renderFila() {
   const e = s.estado;
   const a = e.atual;
@@ -288,6 +342,7 @@ function renderFila() {
     : '<p class="sec centro" style="padding: 12px;">Ninguém na fila ainda. Peça uma música no Catálogo!</p>';
 
   $('[data-aba="fila"]').innerHTML = `
+    ${cartaoAvisos()}
     <section class="palco no-palco" aria-label="Música da vez">
       <div class="filete"><span class="rotulo-p">Agora no palco</span></div>
       ${palco}
@@ -802,6 +857,14 @@ async function aoClicar(ev) {
       avisar('Pronto, apagamos seu e-mail.');
     } else if (acao === 'sem-artista') {
       return trocarModo('musicas');
+    } else if (acao === 'ativar-avisos') {
+      const permissao = await pedirPermissao(s.festa.push_chave);
+      if (permissao === 'granted' && await inscrever(s.festa.push_chave)) avisar('Pronto! Você vai receber os avisos.');
+      else if (permissao === 'denied') avisar('As notificações estão bloqueadas nas configurações do navegador.');
+      return renderFila();
+    } else if (acao === 'dispensar-avisos') {
+      dispensar();
+      return renderFila();
     } else if (acao === 'tipo-ranking') {
       s.ranking.tipo = b.dataset.tipo;
       s.ranking.versao = null;
@@ -818,6 +881,7 @@ async function aoClicar(ev) {
 // ---------- Início ----------
 
 try {
+  await entrarPeloToken();
   await carregarFesta();
   poll = vigiar('/api/estado', aoEstado, { aoErro: () => {} });
 } catch (e) {

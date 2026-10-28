@@ -246,8 +246,24 @@ CREATE TABLE generos_artista (     -- 5.7
   origem    TEXT NOT NULL           -- claude | importado
 );
 
+CREATE TABLE inscricoes_push (    -- 9.3
+  endpoint  TEXT PRIMARY KEY,       -- endereço do serviço de push do navegador
+  pessoa_id TEXT NOT NULL REFERENCES pessoas(id) ON DELETE CASCADE,
+  p256dh    TEXT NOT NULL,
+  auth      TEXT NOT NULL,
+  criado_em TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE avisos (               -- mensagens de quem organiza (9.3)
+  id        INTEGER PRIMARY KEY AUTOINCREMENT,
+  texto     TEXT NOT NULL,
+  criado_em TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE meta (chave TEXT PRIMARY KEY, valor TEXT);  -- versao, ultimo_cantor_id
 ```
+
+Em `pedidos`, `avisado INTEGER NOT NULL DEFAULT 0` marca que o aviso de "próxima" (9.3) já saiu.
 
 `PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;`
 
@@ -261,12 +277,13 @@ CREATE TABLE meta (chave TEXT PRIMARY KEY, valor TEXT);  -- versao, ultimo_canto
 
 ### 7.1 Privacidade
 - Só cookies essenciais (`kid` e `adm`), sem rastreamento, anúncios nem pedidos a terceiros: fontes e imagens saem do próprio servidor (11). Por isso não há banner de consentimento.
+- Exceção opcional: os avisos por notificação (9.3) passam pelo serviço de push do navegador (Google, Apple, Mozilla ou Microsoft), só se a pessoa permitir. O conteúdo vai cifrado e o serviço não o lê.
 - **Tela de entrada:** junto do campo de nome, o texto "Usamos um cookie só para lembrar quem você é nesta festa. Sem rastreamento." com o link "Privacidade" para `/privacidade`.
 - **Página `/privacidade`:** genérica, com o título e o tema da festa. Diz:
-  - o que é guardado: o nome escolhido, os pedidos, as notas dadas, o e-mail (só se a pessoa deixar, 9.1) e, nos registros técnicos do servidor, endereço IP e horário dos acessos;
+  - o que é guardado: o nome escolhido, os pedidos, as notas dadas, o e-mail (só se a pessoa deixar, 9.1), o endereço de notificação do navegador (só se a pessoa permitir os avisos, 9.3) e, nos registros técnicos do servidor, endereço IP e horário dos acessos;
   - para quê: montar a fila, a votação e o ranking desta festa; os registros técnicos servem só para manter o site no ar e evitar abuso;
   - quem vê: todos na festa veem nomes, músicas pedidas e rankings; quem organiza vê também os pedidos de cada pessoa, mas não vê e-mails nem as notas individuais;
-  - por quanto tempo: o cookie vale até 24 h depois do fim da festa; o e-mail é apagado depois do envio do ranking; ao arquivar, uma cópia do banco (sem e-mails) fica guardada só com quem organiza;
+  - por quanto tempo: o cookie vale até 24 h depois do fim da festa; o e-mail é apagado depois do envio do ranking; ao arquivar, os endereços de notificação são apagados e uma cópia do banco (sem e-mails nem endereços de notificação) fica guardada só com quem organiza;
   - quem responde pelos dados: quem organiza a festa, com o contato do passo 2 quando preenchido.
 
 ## 8. Regras da fila
@@ -329,6 +346,15 @@ Toda escrita incrementa `meta.versao`.
 - Se a chave for um Pix copia e cola (começa com `000201`), o cartão chama o campo de "Pix copia e cola". Só texto, sem QR code. O valor, se houver, é o que o banco gravou no código.
 - O app não recebe nem confere pagamentos e não mostra valores arrecadados.
 
+### 9.3 Avisos por notificação
+- **Web Push padrão** (RFC 8030, conteúdo cifrado pela RFC 8291, identificação VAPID pela RFC 8292), feito com `node:crypto`, sem dependência nova. As chaves VAPID nascem sozinhas em `data/vapid.json` na primeira vez. Só funciona com `PUBLIC_URL` em `https`.
+- **Pedido de permissão:** no toque em "Entrar na festa", se o navegador suportar push. Quem negar segue usando o app normalmente. Na aba Fila, enquanto a permissão não foi respondida, um cartão "Ativar avisos" pede de novo (com "Agora não", lembrado no aparelho).
+- **iPhone:** o push só funciona com o app adicionado à Tela de Início. No Safari do iPhone, o cartão mostra a instrução "Toque em Compartilhar e depois em Adicionar à Tela de Início". O app da Tela de Início não enxerga o cookie do Safari: o endereço da página passa a levar um token de entrada (`/?entrar=<token>`, assinado com `COOKIE_SECRET`), que o app troca pelo cookie `kid` ao abrir e tira da barra.
+- **"Sua música é a próxima":** quando um pedido vira o primeiro da fila (8.2) com alguém no palco, o dono recebe "{nome}, sua música “{título}” é a próxima!" (título da notificação: o título da festa). Uma vez por pedido (`pedidos.avisado`); se o pedido for pulado e voltar para a fila, pode avisar de novo. Se o admin reordenar a fila depois do aviso, ele pode deixar de valer (risco aceito).
+- **Mensagem de quem organiza:** no admin, "Mensagem para os convidados" (até 200 caracteres, ex.: "Hora do parabéns!"). Sai por push para todas as inscrições e aparece como janela no app para quem estiver com ele aberto ou abrir em até 15 minutos, uma vez por aparelho.
+- Inscrição que o serviço de push recusar como inexistente (`404`/`410`) é apagada. Só endereços dos serviços conhecidos são aceitos (Google, Mozilla, Apple, Microsoft).
+- Nada disso funciona com a festa fora de `aberta`.
+
 ## 10. API
 
 JSON. Erros: `{ "erro": "codigo", "mensagem": "texto para a tela" }`.
@@ -339,15 +365,20 @@ JSON. Erros: `{ "erro": "codigo", "mensagem": "texto para a tela" }`.
 ### 10.2 Público
 | Rota | Corpo | Resposta |
 |---|---|---|
-| `GET /api/festa` | | dados públicos: status, título, nome em destaque, subtítulo, data, local, contato, pix, `pix_mensagem`, `filtro_genero`, url da arte, tema, regras visíveis |
+| `GET /api/festa` | | dados públicos: status, título, nome em destaque, subtítulo, data, local, contato, pix, `pix_mensagem`, `filtro_genero`, `push_chave` (chave pública VAPID ou `null` sem `https`, 9.3), url da arte, tema, regras visíveis |
 | `GET /api/festa/arte` | | a imagem |
 | `POST /api/pessoas` | `{nome}` | `201` + cookie; `409 nome_em_uso`; `403 festa_fechada` |
-| `GET /api/estado` | | `{versao, me: {nome, vip, email}, atual, proximos[10], total_fila, meus_pedidos[], votacoes[], limite}`; `atual.liberado_em` (ISO ou `null`) diz a partir de quando o convidado do cookie, se não for o dono, pode marcar Cantou (8.4) |
+| `GET /manifest.webmanifest` | | manifesto do app (nome = título da festa, `display: standalone`) para a Tela de Início (9.3) |
+| `GET /api/estado` | | `{versao, me: {nome, vip, email}, atual, proximos[10], total_fila, meus_pedidos[], votacoes[], limite, aviso}`; `aviso` é `{id, texto} \| null` (mensagem de quem organiza com menos de 15 minutos, 9.3); `atual.liberado_em` (ISO ou `null`) diz a partir de quando o convidado do cookie, se não for o dono, pode marcar Cantou (8.4) |
 | `GET /api/musicas?q=&filtro=&artista=&genero=&offset=` | | página de até 20 + `total` + `offset` (5.4, 5.5, 5.7); `genero` fora da lista dá `422 genero_invalido` e é ignorado com o filtro de gênero desligado |
 | `GET /api/generos?filtro=` | | `{generos: [{nome, total}]}` em ordem de quantidade; lista vazia com o filtro de gênero desligado (5.7) |
 | `GET /api/artistas?filtro=&genero=` | | `{artistas: [{nome, chave, total}]}` em ordem A–Z (5.5); com `genero`, só as músicas daquele gênero (5.7), com as mesmas regras de `genero` de `/api/musicas` |
 | `PUT /api/me/email` | `{email}` | `200 {email}`; `email_invalido`, `email_desligado`, `festa_fechada` (9.1) |
 | `DELETE /api/me/email` | | `204` |
+| `PUT /api/me/push` | `{endpoint, keys: {p256dh, auth}}` | `200`; `inscricao_invalida`, `festa_fechada` (9.3) |
+| `DELETE /api/me/push` | `{endpoint}` | `204` |
+| `GET /api/me/entrada` | | `{token}` para o app da Tela de Início (9.3) |
+| `POST /api/entrar` | `{token}` | `200 {me}` + cookie; `token_invalido` |
 | `GET /api/sugestao` | | `{sugestao: {musica, artista} \| null}` para o convidado do cookie (5.6) |
 | `POST /api/pedidos` | `{musica_cod}` | `201 {pedido, posicao_estimada}`; `limite_atingido`, `ja_pedida`, `musica_inexistente` |
 | `DELETE /api/pedidos/:id` | | `204` |
@@ -374,7 +405,7 @@ JSON. Erros: `{ "erro": "codigo", "mensagem": "texto para a tela" }`.
 | `POST /api/festa/abrir`, `/encerrar`, `/arquivar` | |
 
 ### 10.4 Operação (admin)
-`POST /api/admin/login`, `GET /api/admin/estado`, `POST /api/admin/cantou`, `POST /api/admin/pular`, `POST /api/admin/pedidos/:id/mover {direcao}`, `PATCH /api/admin/pedidos/:id {bypass}`, `GET /api/admin/pessoas`, `PATCH /api/admin/pessoas/:id {vip}`, `POST /api/admin/pedidos {nome, musica_cod}`.
+`POST /api/admin/login`, `GET /api/admin/estado`, `POST /api/admin/cantou`, `POST /api/admin/pular`, `POST /api/admin/pedidos/:id/mover {direcao}`, `PATCH /api/admin/pedidos/:id {bypass}`, `GET /api/admin/pessoas`, `PATCH /api/admin/pessoas/:id {vip}`, `POST /api/admin/pedidos {nome, musica_cod}`, `POST /api/admin/avisos {texto}` → `201 {aviso, inscricoes}` (`texto_vazio`, `texto_longo`, `festa_fechada`; 9.3). `GET /api/admin/estado` traz `avisos: {inscritos, ultimo}` (pessoas com notificação ligada e a última mensagem).
 
 ### 10.5 Máquina de karaokê (opcional)
 Um script fora do app (`integracoes/`) roda num aparelho ao lado da máquina e manda o código por infravermelho (Broadlink ou controle universal Tuya). Liga com `MAQUINA_TOKEN` no `.env` (pelo menos 16 caracteres); sem ele, as rotas respondem `404 maquina_desligada` e o admin não mostra nada da máquina.
@@ -428,6 +459,7 @@ Referência visual: `docs/design/` (formato do protótipo; ver o LEIA-ME de lá)
 - **Entrada:** arte da festa (se houver), nome em destaque e subtítulo dentro do círculo decorativo, campo de nome com o aviso de cookie (7.1), "Entrar na festa".
 - **Cabeçalho:** título curto + nome do convidado.
 - **Menu inferior:** Fila · Catálogo · Pedidos (n) · Ranking.
+- **Avisos:** cartão "Ativar avisos" ou a instrução do iPhone na aba Fila; janela com a mensagem de quem organiza (9.3).
 - **Fila:** "Agora no palco" (título, artista, código grande, cantor); "Cantou?" quando é a vez do usuário; "Fulano já terminou?" (com confirmação) quando `atual.liberado_em` já passou; cartões de voto (atual e anterior); "Próximos 10" com o usuário destacado.
 - **Catálogo:** busca, Músicas / Artistas, filtros (idioma e, se ligado, gênero), rolagem infinita, "Você pode gostar", "Pedir"/"Na fila", aviso de limite.
 - **Pedidos:** posição, espera estimada, cancelar, "Já cantei".
@@ -437,7 +469,7 @@ Referência visual: `docs/design/` (formato do protótipo; ver o LEIA-ME de lá)
 
 ### Admin (`/admin`)
 - Sem PIN configurado: assistente de setup (seção 4).
-- Com festa: Operação (contadores, palco com Cantou/Pular e, com a máquina ligada (10.5), o estado da máquina e "Reenviar código", fila com ↑ ↓, Bypass, VIP, selos, convidados, adicionar pedido) e um menu Festa (editar dados, visual, catálogo, regras, QR, encerrar, arquivar).
+- Com festa: Operação (contadores, palco com Cantou/Pular e, com a máquina ligada (10.5), o estado da máquina e "Reenviar código", fila com ↑ ↓, Bypass, VIP, selos, convidados, adicionar pedido, "Mensagem para os convidados" (9.3)) e um menu Festa (editar dados, visual, catálogo, regras, QR, encerrar, arquivar).
 
 ## 13. Instalação
 
@@ -480,3 +512,4 @@ Ver `README.md`. Variáveis de ambiente (`.env.example`): `PORT`, `PUBLIC_URL`, 
 - Catálogos reais não vão para o repositório (seção 5; ver README). Classificações de gênero de catálogos reais também não.
 - Gênero musical por artista, classificado pelo Claude com a chave de quem organiza, que nunca é guardada; ligar o filtro é escolha de quem organiza, depois de ver a precisão estimada (5.7).
 - Prêmio por Pix sem integração de pagamento: só a chave de quem organiza (9.2).
+- Avisos por Web Push com `node:crypto` em vez de biblioteca; no iPhone, só pela Tela de Início, com token de entrada para levar a identidade (9.3).

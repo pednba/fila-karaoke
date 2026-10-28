@@ -4,7 +4,7 @@ self.addEventListener('push', (ev) => {
   try {
     dados = ev.data?.json() ?? {};
   } catch {}
-  ev.waitUntil(self.registration.showNotification(dados.titulo || 'Karaokê', { body: dados.corpo || '', tag: dados.tag, renotify: Boolean(dados.tag) }));
+  ev.waitUntil(self.registration.showNotification(dados.titulo || 'Karaokê', { body: dados.corpo || '', icon: '/icone-192.png', tag: dados.tag, renotify: Boolean(dados.tag) }));
 });
 
 self.addEventListener('notificationclick', (ev) => {

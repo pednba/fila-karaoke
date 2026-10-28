@@ -86,3 +86,18 @@ test('rota de API inexistente continua respondendo JSON 404', async () => {
   assert.equal(res.status, 404);
   assert.equal((await res.json()).erro, 'rota_inexistente');
 });
+
+test('ícone de microfone nas cores do tema: favicon, Tela de Início e manifesto', async () => {
+  const svg = await fetch(base + '/favicon.svg');
+  assert.match(svg.headers.get('content-type'), /image\/svg\+xml/);
+  assert.match(await svg.text(), /<svg[^>]*>.*<rect x="9" y="3"/);
+  for (const [rota, tamanho] of [['/icone-192.png', 192], ['/icone-512.png', 512], ['/apple-touch-icon.png', 180], ['/favicon.ico', 192]]) {
+    const res = await fetch(base + rota);
+    assert.equal(res.status, 200, rota);
+    const png = Buffer.from(await res.arrayBuffer());
+    assert.equal(png.readUInt32BE(16), tamanho, rota);
+  }
+  assert.equal((await fetch(base + '/icone-999.png')).status, 404);
+  const manifesto = await (await fetch(base + '/manifest.webmanifest')).json();
+  assert.ok(manifesto.icons.some((i) => i.src === '/icone-512.png'));
+});

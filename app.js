@@ -13,6 +13,7 @@ import { rotasPublicas } from './rotas/publico.js';
 import { criarEnvioRanking, transporteSmtp } from './email.js';
 import { criarMaquina } from './maquina.js';
 import { criarPush } from './push.js';
+import { svgIcone, pngIcone, TAMANHOS_PNG } from './icones.js';
 
 // config: { dataDir, publicUrl, setupToken, cookieSecret, cookiesSeguros, smtp?, transporteEmail?, maquinaToken?, fetch? }
 export function criarApp({ db, config }) {
@@ -58,7 +59,23 @@ export function criarApp({ db, config }) {
     res.type('application/manifest+json').set('Cache-Control', 'no-cache').json({
       name: nome, short_name: nome.slice(0, 20), display: 'standalone', lang: 'pt-BR',
       ...(cor ? { background_color: cor, theme_color: cor } : {}),
+      icons: [
+        { src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml' },
+        ...TAMANHOS_PNG.filter((t) => t !== 180).map((t) => ({ src: `/icone-${t}.png`, sizes: `${t}x${t}`, type: 'image/png' })),
+      ],
     });
+  });
+  app.get('/favicon.svg', (req, res) => {
+    res.type('image/svg+xml').set('Cache-Control', 'no-cache').send(svgIcone(lerFesta(db).tema?.tokens));
+  });
+  app.get(['/favicon.ico', '/apple-touch-icon.png', '/icone-:tamanho.png'], async (req, res, next) => {
+    const tamanho = req.params.tamanho ? Number(req.params.tamanho) : req.path === '/favicon.ico' ? 192 : 180;
+    if (!TAMANHOS_PNG.includes(tamanho)) return next();
+    try {
+      res.type('image/png').set('Cache-Control', 'no-cache').send(await pngIcone(lerFesta(db).tema?.tokens, tamanho));
+    } catch (e) {
+      next(e);
+    }
   });
   app.use(express.static(fileURLToPath(new URL('./public', import.meta.url)), { extensions: ['html'] }));
 

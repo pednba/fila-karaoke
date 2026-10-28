@@ -368,7 +368,8 @@ JSON. Erros: `{ "erro": "codigo", "mensagem": "texto para a tela" }`.
 | `GET /api/festa` | | dados públicos: status, título, nome em destaque, subtítulo, data, local, contato, pix, `pix_mensagem`, `filtro_genero`, `push_chave` (chave pública VAPID ou `null` sem `https`, 9.3), url da arte, tema, regras visíveis |
 | `GET /api/festa/arte` | | a imagem |
 | `POST /api/pessoas` | `{nome}` | `201` + cookie; `409 nome_em_uso`; `403 festa_fechada` |
-| `GET /manifest.webmanifest` | | manifesto do app (nome = título da festa, `display: standalone`) para a Tela de Início (9.3) |
+| `GET /manifest.webmanifest` | | manifesto do app (nome = título da festa, `display: standalone`) e ícones, para a Tela de Início (9.3) |
+| `GET /favicon.svg`, `/icone-{180,192,512}.png`, `/apple-touch-icon.png`, `/favicon.ico` | | ícone do app: microfone na cor `destaque-palco` sobre `palco`, do tema da festa; os PNGs saem do mesmo desenho (sharp) e também aparecem nas notificações |
 | `GET /api/estado` | | `{versao, me: {nome, vip, email}, atual, proximos[10], total_fila, meus_pedidos[], votacoes[], limite, aviso}`; `aviso` é `{id, texto} \| null` (mensagem de quem organiza com menos de 15 minutos, 9.3); `atual.liberado_em` (ISO ou `null`) diz a partir de quando o convidado do cookie, se não for o dono, pode marcar Cantou (8.4) |
 | `GET /api/musicas?q=&filtro=&artista=&genero=&offset=` | | página de até 20 + `total` + `offset` (5.4, 5.5, 5.7); `genero` fora da lista dá `422 genero_invalido` e é ignorado com o filtro de gênero desligado |
 | `GET /api/generos?filtro=` | | `{generos: [{nome, total}]}` em ordem de quantidade; lista vazia com o filtro de gênero desligado (5.7) |

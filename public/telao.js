@@ -214,11 +214,14 @@ function render() {
         </div>` : '<p class="t-centro t-sec" style="font-size: 1.6em;">A festa terminou.</p>'}`;
     return;
   }
+  // Sem QR (regra qr_telao) e sem votação, a coluna da direita some e a esquerda ocupa a tela.
+  const { votacao, qr_telao } = s.festa.regras;
+  const direita = votacao ? ranking() + (qr_telao ? qr() : '') : qr_telao ? qr(true) : '';
   app.innerHTML = `
     ${topo()}
-    <main class="t-corpo">
+    <main class="t-corpo ${direita ? '' : 't-corpo-um'}">
       <div class="t-coluna">${palco()}${baixo()}</div>
-      <div class="t-coluna">${s.festa.regras.votacao ? ranking() + qr() : qr(true)}</div>
+      ${direita ? `<div class="t-coluna">${direita}</div>` : ''}
     </main>
     ${aviso()}`;
   cortar();

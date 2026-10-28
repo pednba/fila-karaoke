@@ -17,6 +17,7 @@ export const REGRAS_PADRAO = {
   minimo_performances: 2,
   vip: true,
   recados: true,
+  qr_telao: true,
 };
 
 const LIMITES_REGRAS = {

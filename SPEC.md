@@ -111,6 +111,7 @@ fila-karaoke/
    | Mínimo de performances no ranking de pessoas | 2 |
    | VIP disponível | sim |
    | Recados dos convidados no telão | sim |
+   | QR code de entrada no telão | sim |
 
    O passo mostra o dimensionamento (seção 1) com os números da festa.
 6. **Publicar**
@@ -494,7 +495,7 @@ Página só de leitura para uma TV na horizontal (navegador da TV, Chromecast ou
 - **Cabeçalho:** nome em destaque da festa e o filete do tema.
 - **Esquerda:** "Agora no palco" (título, artista, cantor; sem o código da música, que é do operador). Embaixo, lado a lado: os próximos (até 10, uma linha cada, quantos couberem na tela) e os recados dos convidados (9.4; "Mande um recado pelo celular!" enquanto não houver). Palco vazio: "O palco está livre!". Com os recados desligados, os próximos ocupam a largura toda.
 - **Direita, Ranking** (com a votação ligada): os 5 primeiros de Pessoas e os 5 de Performances (só Performances, até 8, com o ranking de pessoas desligado ou vazio), o 1º em destaque. Embaixo, "Votação aberta para {cantor}" enquanto houver.
-- **QR code** para entrar na festa, com o link escrito (sempre visível com a festa aberta; com a votação desligada, ocupa a coluna da direita).
+- **QR code** para entrar na festa, com o link escrito, com a regra "QR code de entrada no telão" ligada (sempre visível com a festa aberta; com a votação desligada, ocupa a coluna da direita). Desligada (QR impresso nas mesas, por exemplo), o ranking fica com a coluna toda; sem QR e sem votação, a esquerda ocupa a tela.
 - **Mensagem de quem organiza** (9.3): faixa em destaque por 15 minutos.
 - **Rascunho:** nome da festa e "Festa em preparação". **Encerrada:** "Obrigado!" e o ranking final (até 10 de cada).
 - Textos em tamanho de TV (proporcionais à largura da tela); um toque ou clique põe em tela cheia; a página pede para a tela não apagar (Wake Lock, quando o navegador permite).

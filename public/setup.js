@@ -680,6 +680,7 @@ const REGRAS = [
   ['minimo_performances', 'Mínimo de performances no ranking de pessoas', 'numero'],
   ['vip', 'VIP disponível', 'sim'],
   ['recados', 'Recados dos convidados no telão', 'sim'],
+  ['qr_telao', 'QR code de entrada no telão', 'sim'],
 ];
 
 function textoDimensionamento(duracaoMin, minutos, convidados) {
@@ -756,6 +757,7 @@ function passoPublicar() {
         ${r.votacao ? `<tr><td>Ranking de pessoas</td><td>${r.ranking_pessoas ? `ligado · mínimo de ${plural(r.minimo_performances, 'performance', 'performances')}` : 'desligado'}</td></tr>` : ''}
         <tr><td>VIP</td><td>${r.vip ? 'disponível' : 'desligado'}</td></tr>
         <tr><td>Recados no telão</td><td>${r.recados ? 'ligados' : 'desligados'}</td></tr>
+        <tr><td>QR code no telão</td><td>${r.qr_telao ? 'sim' : 'não'}</td></tr>
         ${st.maquina ? `<tr><td>Envio para a máquina</td><td>${st.maquina.ativa ? 'ligado' : 'desligado'}</td></tr>` : ''}
         <tr><td>Capacidade</td><td>~${plural(st.dimensionamento.musicas, 'música', 'músicas')}</td></tr>
       </table>

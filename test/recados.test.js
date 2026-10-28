@@ -63,6 +63,7 @@ test('recados: convidado manda, telão lista, um por minuto, admin apaga (SPEC 9
   try {
     const telao = cliente();
     assert.equal((await telao('GET', '/api/festa')).dados.regras.recados, true);
+    assert.equal((await telao('GET', '/api/festa')).dados.regras.qr_telao, true);
     assert.deepEqual((await telao('GET', '/api/recados')).dados, { recados: [] });
     assert.equal((await telao('POST', '/api/recados', { texto: 'Oi' })).dados.erro, 'sem_cadastro');
 

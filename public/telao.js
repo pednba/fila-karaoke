@@ -86,12 +86,18 @@ function palco() {
 
 // Uma linha por cantor; quantos couberem (cortar() esconde os que passariam da tela).
 // Os pedidos mais recentes fecham a lista com a posição real, para quem acabou de pedir se ver no telão;
-// onde estiverem (no topo ou no fim), ganham o fundo de realce.
+// onde estiverem (no topo ou no fim), ganham o fundo de realce. O realce sai quando o pedido já subiu na fila
+// e está na faixa do topo (cortar() decide, porque a faixa depende da tela). Os que já estavam na fila
+// quando o telão abriu não ganham realce.
+const posicaoDeEntrada = new Map();
 function proximos() {
   const recentes = s.estado.recentes || [];
-  const ids = new Set(recentes.map((p) => p.id));
+  const primeira = !posicaoDeEntrada.size;
+  for (const p of recentes) if (!posicaoDeEntrada.has(p.id)) posicaoDeEntrada.set(p.id, primeira ? 0 : p.posicao);
+  const realce = new Map(recentes.filter((p) => posicaoDeEntrada.get(p.id) > 0)
+    .map((p) => [p.id, p.posicao < posicaoDeEntrada.get(p.id) ? 'data-subiu' : '']));
   const linha = (p, n, extra = '') => `
-    <div class="t-item ${ids.has(p.id) ? 't-recente' : ''}" data-id="${p.id}" ${extra}>
+    <div class="t-item ${realce.has(p.id) ? 't-recente' : ''}" data-id="${p.id}" ${realce.get(p.id) ?? ''} ${extra}>
       <span class="t-num">${n}</span>
       <span class="t-item-nome t-cortar">${esc(p.cantor)}</span>
       <span class="t-item-musica t-cortar">${esc(p.titulo)}</span>
@@ -184,6 +190,7 @@ function cortar() {
       mostrarFixos();
     }
     for (const fixo of fixos) if (!fixo.hidden && passa(fixo)) fixo.hidden = true;
+    for (const item of itens) if (!item.hidden && item.hasAttribute('data-subiu')) item.classList.remove('t-recente');
   }
 }
 addEventListener('resize', cortar);

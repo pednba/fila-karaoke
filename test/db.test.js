@@ -16,7 +16,7 @@ test('cria as tabelas da seção 6 e começa na versão 0', () => {
 test('migrar é idempotente', () => {
   const db = abrirBanco(':memory:');
   migrar(db);
-  assert.equal(db.pragma('user_version', { simple: true }), 7);
+  assert.equal(db.pragma('user_version', { simple: true }), 8);
   assert.equal(lerVersao(db), 0);
 });
 

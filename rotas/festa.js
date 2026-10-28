@@ -23,6 +23,7 @@ export function rotasFesta({ db, config, auth, email }) {
       local: f.local,
       contato: f.contato, // página de privacidade (SPEC 7.1)
       pix: f.pix, // prêmio do ranking (SPEC 9.2)
+      pix_mensagem: f.pix_mensagem,
       filtro_genero: Boolean(f.filtro_genero), // chips de gênero no catálogo (SPEC 5.7)
       arte_url: f.arte_arquivo ? '/api/festa/arte' : null,
       tema: f.tema,

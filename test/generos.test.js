@@ -187,7 +187,19 @@ test('chave Pix no passo 2 sai em /api/festa', async () => {
   const corpo = { nome_destaque: 'Helena', inicio_em: '2026-12-05T20:00:00-03:00', duracao_horas: 4, convidados: 30, pix: ' helena@exemplo.com ' };
   assert.equal((await api('PUT', '/api/setup/festa', corpo)).dados.festa.pix, 'helena@exemplo.com');
   assert.equal((await api('GET', '/api/festa')).dados.pix, 'helena@exemplo.com');
-  const longo = await api('PUT', '/api/setup/festa', { ...corpo, pix: 'x'.repeat(78) });
+  const longo = await api('PUT', '/api/setup/festa', { ...corpo, pix: 'x'.repeat(513) });
   assert.equal(longo.status, 422);
   assert.equal(longo.dados.campo, 'pix');
+});
+
+test('Pix copia e cola longo e mensagem do apelo', async () => {
+  const brcode = '000201' + '26'.padEnd(200, '9') + '6304ABCD';
+  const corpo = { nome_destaque: 'Helena', inicio_em: '2026-12-05T20:00:00-03:00', duracao_horas: 4, convidados: 30, pix: brcode, pix_mensagem: 'Doe R$ 1 para quem ganhar!' };
+  assert.equal((await api('PUT', '/api/setup/festa', corpo)).status, 200);
+  const festa = (await api('GET', '/api/festa')).dados;
+  assert.equal(festa.pix, brcode);
+  assert.equal(festa.pix_mensagem, 'Doe R$ 1 para quem ganhar!');
+  const longa = await api('PUT', '/api/setup/festa', { ...corpo, pix_mensagem: 'x'.repeat(201) });
+  assert.equal(longa.status, 422);
+  assert.equal(longa.dados.campo, 'pix_mensagem');
 });

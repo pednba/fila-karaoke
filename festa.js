@@ -54,7 +54,9 @@ export function validarDadosFesta(corpo) {
   const subtitulo = texto(corpo.subtitulo, 'subtitulo', 'o subtítulo', 60);
   const local = texto(corpo.local, 'local', 'o local', 120);
   const contato = texto(corpo.contato, 'contato', 'o contato', 120);
-  const pix = texto(corpo.pix, 'pix', 'a chave Pix', 77);
+  // Pix copia e cola (BR Code) tem até 512 caracteres.
+  const pix = texto(corpo.pix, 'pix', 'a chave Pix', 512);
+  const pix_mensagem = texto(corpo.pix_mensagem, 'pix_mensagem', 'a mensagem do Pix', 200);
 
   const inicio_em = String(corpo.inicio_em ?? '').trim();
   if (!ISO_COM_FUSO.test(inicio_em) || Number.isNaN(Date.parse(inicio_em))) {
@@ -68,7 +70,7 @@ export function validarDadosFesta(corpo) {
   if (!Number.isInteger(convidados) || convidados < 1 || convidados > 1000) {
     throw erro(422, 'convidados_invalido', 'Informe o número estimado de convidados (1 a 1000).', { campo: 'convidados' });
   }
-  return { nome_destaque, titulo, subtitulo, inicio_em, duracao_min: Math.round(horas * 60), local, contato, pix, convidados };
+  return { nome_destaque, titulo, subtitulo, inicio_em, duracao_min: Math.round(horas * 60), local, contato, pix, pix_mensagem, convidados };
 }
 
 // Passo 5. Aceita só as chaves conhecidas, mescla com as atuais.

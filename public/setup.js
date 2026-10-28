@@ -228,8 +228,11 @@ function passoFesta() {
         <input id="contato" name="contato" class="entrada" maxlength="120" value="${esc(f.contato)}" placeholder="E-mail ou telefone">
         <span class="sec">Aparece na página de privacidade, para quem quiser falar sobre os próprios dados.</span></div>
       <div class="campo"><label for="pix">Chave Pix para o prêmio (opcional)</label>
-        <input id="pix" name="pix" class="entrada" maxlength="77" autocomplete="off" value="${esc(f.pix)}" placeholder="E-mail, telefone, CPF ou chave aleatória">
-        <span class="sec">Com a votação ligada, aparece na aba Ranking: quem quiser contribuir para o prêmio de quem ganhar faz um Pix para você. O app não confere pagamentos.</span></div>
+        <input id="pix" name="pix" class="entrada" maxlength="512" autocomplete="off" value="${esc(f.pix)}" placeholder="Chave Pix ou Pix copia e cola">
+        <span class="sec">Com a votação ligada, aparece na aba Ranking: quem quiser contribuir para o prêmio de quem ganhar faz um Pix para você. Aceita Pix copia e cola (com o valor que você pôs no banco). O app não confere pagamentos.</span></div>
+      <div class="campo"><label for="pix_mensagem">Mensagem antes da chave (opcional)</label>
+        <textarea id="pix_mensagem" name="pix_mensagem" class="entrada" maxlength="200" rows="2" placeholder="Ex.: Doe R$ 1 para quem ganhar o ranking!">${esc(f.pix_mensagem)}</textarea>
+        <span class="sec">Vazia, o cartão explica que o Pix vai para você e você repassa a quem ganhar.</span></div>
       <div class="campo"><label for="convidados">Convidados (estimativa)</label>
         <input id="convidados" name="convidados" class="entrada" type="number" min="1" max="1000" step="1" inputmode="numeric" required value="${f.convidados ?? ''}"></div>
       <span class="erro-campo erro-form" hidden></span>
@@ -246,6 +249,7 @@ function passoFesta() {
       local: d.get('local'),
       contato: d.get('contato'),
       pix: d.get('pix'),
+      pix_mensagem: d.get('pix_mensagem'),
       convidados: Number(d.get('convidados')),
     });
   });
@@ -728,7 +732,8 @@ function passoPublicar() {
         <tr><td>Duração</td><td>${f.duracao_min ? formatarDuracao(f.duracao_min) : '–'}</td></tr>
         ${f.local ? `<tr><td>Local</td><td>${esc(f.local)}</td></tr>` : ''}
         ${f.contato ? `<tr><td>Contato</td><td>${esc(f.contato)}</td></tr>` : ''}
-        ${f.pix ? `<tr><td>Chave Pix do prêmio</td><td>${esc(f.pix)}</td></tr>` : ''}
+        ${f.pix ? `<tr><td>Chave Pix do prêmio</td><td style="overflow-wrap: anywhere;">${esc(f.pix)}</td></tr>` : ''}
+        ${f.pix && f.pix_mensagem ? `<tr><td>Mensagem do Pix</td><td>${esc(f.pix_mensagem)}</td></tr>` : ''}
         <tr><td>Convidados</td><td>${f.convidados ?? '–'}</td></tr>
         <tr><td>Tema</td><td>${esc(preset?.nome ?? f.tema.preset)} · ${esc(f.tema.fonte)}${f.tema.destaque ? ` · ${esc(f.tema.destaque)}` : ''}</td></tr>
         <tr><td>Arte</td><td>${f.arte_url ? 'enviada' : 'sem arte'}</td></tr>

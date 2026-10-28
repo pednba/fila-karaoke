@@ -84,7 +84,8 @@ fila-karaoke/
    - Data e hora de início, duração em horas.
    - Local (opcional, texto livre).
    - Contato de quem organiza (opcional, texto livre até 120 caracteres: e-mail ou telefone). Aparece na página de privacidade (7.1).
-   - Chave Pix de quem organiza (opcional, até 77 caracteres), para o prêmio de quem ganhar o ranking (9.2).
+   - Chave Pix de quem organiza (opcional, até 512 caracteres: chave comum ou Pix copia e cola), para o prêmio de quem ganhar o ranking (9.2).
+   - Mensagem do apelo (opcional, até 200 caracteres), que aparece antes da chave no cartão do prêmio (9.2).
    - Número estimado de convidados.
 3. **Visual**
    - Arte da festa: upload JPG/PNG/WebP até 5 MB (o convite, por exemplo). Aparece na tela de entrada dos convidados e no topo do ranking final. Redimensionar no servidor para no máximo 1200 px de largura.
@@ -183,7 +184,8 @@ CREATE TABLE festa (
   duracao_min  INTEGER NOT NULL DEFAULT 240,
   local        TEXT NOT NULL DEFAULT '',
   contato      TEXT NOT NULL DEFAULT '',  -- de quem organiza (7.1)
-  pix          TEXT NOT NULL DEFAULT '',  -- chave Pix de quem organiza (9.2)
+  pix          TEXT NOT NULL DEFAULT '',  -- chave Pix ou Pix copia e cola de quem organiza (9.2)
+  pix_mensagem TEXT NOT NULL DEFAULT '',  -- apelo antes da chave (9.2)
   filtro_genero INTEGER NOT NULL DEFAULT 0, -- 1 = chips de gênero no catálogo (5.7)
   maquina_ativa INTEGER NOT NULL DEFAULT 0, -- 1 = envia o código da vez para a máquina (10.5)
   convidados   INTEGER NOT NULL DEFAULT 30,
@@ -322,7 +324,8 @@ Toda escrita incrementa `meta.versao`.
 - Rodapé extra opcional: `SMTP_RODAPE` no `.env` (texto livre de quem hospeda o app). Se preenchido, aparece no fim do e-mail, depois do aviso de que o endereço foi apagado.
 
 ### 9.2 Prêmio por Pix
-- Com a votação ligada, a festa aberta e a chave Pix preenchida no passo 2, a aba Ranking mostra um cartão "Prêmio de quem ganhar": quem quiser contribuir faz um Pix para quem organiza, que repassa a quem ganhar. Mostra a chave e um botão "Copiar".
+- Com a votação ligada, a festa aberta e a chave Pix preenchida no passo 2, a aba Ranking mostra um cartão "Prêmio de quem ganhar": quem quiser contribuir faz um Pix para quem organiza, que repassa a quem ganhar. Mostra a mensagem do apelo (ou, se vazia, um texto padrão explicando o repasse), a chave e um botão "Copiar".
+- Se a chave for um Pix copia e cola (começa com `000201`), o cartão chama o campo de "Pix copia e cola". Só texto, sem QR code. O valor, se houver, é o que o banco gravou no código.
 - O app não recebe nem confere pagamentos e não mostra valores arrecadados.
 
 ## 10. API
@@ -335,7 +338,7 @@ JSON. Erros: `{ "erro": "codigo", "mensagem": "texto para a tela" }`.
 ### 10.2 Público
 | Rota | Corpo | Resposta |
 |---|---|---|
-| `GET /api/festa` | | dados públicos: status, título, nome em destaque, subtítulo, data, local, contato, pix, `filtro_genero`, url da arte, tema, regras visíveis |
+| `GET /api/festa` | | dados públicos: status, título, nome em destaque, subtítulo, data, local, contato, pix, `pix_mensagem`, `filtro_genero`, url da arte, tema, regras visíveis |
 | `GET /api/festa/arte` | | a imagem |
 | `POST /api/pessoas` | `{nome}` | `201` + cookie; `409 nome_em_uso`; `403 festa_fechada` |
 | `GET /api/estado` | | `{versao, me: {nome, vip, email}, atual, proximos[10], total_fila, meus_pedidos[], votacoes[], limite}`; `atual.liberado_em` (ISO ou `null`) diz a partir de quando o convidado do cookie, se não for o dono, pode marcar Cantou (8.4) |

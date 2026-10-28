@@ -104,6 +104,10 @@ const MIGRACOES = [
   `
   ALTER TABLE festa ADD COLUMN maquina_ativa INTEGER NOT NULL DEFAULT 0;
   `,
+  // Mensagem do apelo no cartão do prêmio por Pix (SPEC 9.2).
+  `
+  ALTER TABLE festa ADD COLUMN pix_mensagem TEXT NOT NULL DEFAULT '';
+  `,
 ];
 
 export function migrar(db) {

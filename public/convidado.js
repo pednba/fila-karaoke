@@ -659,24 +659,27 @@ async function renderRanking(alvo, final = false) {
 function renderPix() {
   const alvo = $('#ranking-pix');
   const pix = s.estado.status === 'aberta' ? s.festa.pix : '';
-  if (alvo.dataset.pix === (pix || '') && (alvo.childElementCount || !pix)) return;
-  alvo.dataset.pix = pix || '';
+  const mensagem = s.festa.pix_mensagem || 'Quem quiser contribuir faz um Pix para quem organiza a festa, que repassa a quem ganhar o ranking.';
+  const chave = pix ? `${pix}\n${mensagem}` : '';
+  if (alvo.dataset.pix === chave && (alvo.childElementCount || !pix)) return;
+  alvo.dataset.pix = chave;
   if (!pix) {
     alvo.innerHTML = '';
     return;
   }
+  const copiaECola = pix.startsWith('000201');
   alvo.innerHTML = `
     <div class="cartao-decor pilha" style="gap: 10px;">
       <span class="destaque" style="font-size: 22px;">Prêmio de quem ganhar</span>
-      <span>Quem quiser contribuir faz um Pix para quem organiza a festa, que repassa a quem ganhar o ranking.</span>
-      <span class="sec" style="font-size: 13px;">Chave Pix</span>
-      <strong style="overflow-wrap: anywhere;">${esc(pix)}</strong>
+      <span style="white-space: pre-line;">${esc(mensagem)}</span>
+      <span class="sec" style="font-size: 13px;">${copiaECola ? 'Pix copia e cola' : 'Chave Pix'}</span>
+      <strong style="overflow-wrap: anywhere;${copiaECola ? ' font-size: 12px; font-weight: normal;' : ''}">${esc(pix)}</strong>
       <button type="button" class="btn btn-pequeno" id="copiar-pix" style="align-self: flex-start;">Copiar</button>
     </div>`;
   $('#copiar-pix').onclick = async () => {
     try {
       await navigator.clipboard.writeText(pix);
-      avisar('Chave Pix copiada.');
+      avisar(copiaECola ? 'Pix copia e cola copiado.' : 'Chave Pix copiada.');
     } catch {
       prompt('Copie a chave Pix:', pix);
     }

@@ -30,13 +30,13 @@ after(() => {
 });
 
 test('páginas do front são servidas como HTML, com e sem extensão', async () => {
-  for (const rota of ['/', '/admin', '/setup', '/setup.html', '/privacidade']) {
+  for (const rota of ['/', '/admin', '/setup', '/setup.html', '/privacidade', '/festa']) {
     const res = await fetch(base + rota);
     assert.equal(res.status, 200, rota);
     assert.match(res.headers.get('content-type'), /text\/html/, rota);
     assert.match(await res.text(), /<html lang="pt-BR">/, rota);
   }
-  for (const arquivo of ['/estilo.css', '/comum.js', '/convidado.js', '/admin.js', '/setup.js', '/privacidade.js', '/avisos.js', '/sw.js']) {
+  for (const arquivo of ['/estilo.css', '/comum.js', '/convidado.js', '/admin.js', '/setup.js', '/privacidade.js', '/avisos.js', '/sw.js', '/telao.js', '/telao.css']) {
     assert.equal((await fetch(base + arquivo)).status, 200, arquivo);
   }
 });
@@ -49,7 +49,7 @@ test('fontes saem do próprio servidor e nenhuma página chama terceiros (SPEC 7
     const res = await fetch(`${base}/fontes/${arquivo}`);
     assert.equal(res.status, 200, arquivo);
   }
-  for (const rota of ['/', '/admin', '/setup', '/privacidade']) {
+  for (const rota of ['/', '/admin', '/setup', '/privacidade', '/festa']) {
     assert.doesNotMatch(await (await fetch(base + rota)).text(), /https?:\/\//, rota);
   }
 });
@@ -100,4 +100,11 @@ test('ícone de microfone nas cores do tema: favicon, Tela de Início e manifest
   assert.equal((await fetch(base + '/icone-999.png')).status, 404);
   const manifesto = await (await fetch(base + '/manifest.webmanifest')).json();
   assert.ok(manifesto.icons.some((i) => i.src === '/icone-512.png'));
+});
+
+test('telão: QR code público com o link da festa (SPEC 12)', async () => {
+  const res = await fetch(base + '/api/festa/qr.svg');
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get('content-type'), /image\/svg\+xml/);
+  assert.match(await res.text(), /<svg[^>]*viewBox/);
 });

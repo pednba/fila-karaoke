@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import express from 'express';
+import QRCode from 'qrcode';
 import { erro } from '../erros.js';
 import { escrever } from '../db.js';
 import { estadoSetup, lerFesta, arquivarFesta } from '../festa.js';
@@ -39,6 +40,12 @@ export function rotasFesta({ db, config, auth, email, push }) {
     const arquivo = arte_arquivo && path.join(config.dataDir, arte_arquivo);
     if (!arquivo || !fs.existsSync(arquivo)) throw erro(404, 'sem_arte', 'A festa não tem arte.');
     res.set('Cache-Control', 'public, max-age=300').sendFile(path.resolve(arquivo));
+  });
+
+  // QR code do link da festa para o telão (SPEC 12).
+  r.get('/qr.svg', async (req, res) => {
+    const svg = await QRCode.toString(new URL('/', config.publicUrl).href, { type: 'svg', margin: 0 });
+    res.type('image/svg+xml').set('Cache-Control', 'public, max-age=300').send(svg);
   });
 
   const exigirStatus = (status) => {

@@ -52,6 +52,7 @@ A fonte da verdade é a [`SPEC.md`](SPEC.md). Este README resume o que existe e 
 | Operação | Cantou, Pular ausente, mover ↑/↓, bypass da regra de duas seguidas, VIP, pedido para quem está sem celular | 8.4 |
 | Ciclo de vida | Rascunho → aberta → encerrada (ranking final) → arquivada (backup do banco e festa nova) | 4.3 |
 | Máquina | Estado da conexão e "Reenviar código", quando a integração está ligada | 10.5 |
+| Telão | `/festa`: fila, ranking e QR code de entrada numa TV, só leitura | 12 |
 
 ### Regras da fila em uma frase
 
@@ -109,6 +110,7 @@ importadores/
   csv.js                CSV com , ou ;
 public/
   index.html, convidado.js   tela do convidado
+  festa.html, telao.js       telão (fila e ranking na TV)
   admin.html, admin.js       painel do admin
   setup.html, setup.js       assistente de setup
   privacidade.html, .js      página de privacidade

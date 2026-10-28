@@ -28,9 +28,10 @@ O setup mostra a capacidade estimada da festa: `músicas = duração_em_min / mi
 - Admin: Cantou, Pular ausente, mudar ordem, bypass da regra, VIP (várias pessoas), adicionar pedido para quem não tem celular.
 - Nota da festa: voto 0 a 10 por performance, mediana, ranking de performances e ranking de pessoas (cada um pode ser desligado no setup).
 - Encerrar festa (ranking final em modo leitura) e arquivar para começar outra.
+- Telão (`/festa`): fila e ranking numa TV (12).
 
 ### Fora da v1
-- Várias festas simultâneas, contas de usuário, duetos, modo telão, renomear/mesclar pessoas, pedido fora do catálogo, WebSocket/SSE, extração automática de cores da arte.
+- Várias festas simultâneas, contas de usuário, duetos, renomear/mesclar pessoas, pedido fora do catálogo, WebSocket/SSE, extração automática de cores da arte.
 
 ## 3. Stack
 
@@ -368,6 +369,7 @@ JSON. Erros: `{ "erro": "codigo", "mensagem": "texto para a tela" }`.
 |---|---|---|
 | `GET /api/festa` | | dados públicos: status, título, nome em destaque, subtítulo, data, local, contato, pix, `pix_mensagem`, `filtro_genero`, `push_chave` (chave pública VAPID ou `null` sem `https`, 9.3), url da arte, tema, regras visíveis |
 | `GET /api/festa/arte` | | a imagem |
+| `GET /api/festa/qr.svg` | | QR code do link da festa (`PUBLIC_URL`), para o telão (12) |
 | `POST /api/pessoas` | `{nome}` | `201` + cookie; `409 nome_em_uso`; `403 festa_fechada` |
 | `GET /manifest.webmanifest` | | manifesto do app (nome = título da festa, `display: standalone`) e ícones, para a Tela de Início (9.3) |
 | `GET /favicon.svg`, `/icone-{180,192,512}.png`, `/apple-touch-icon.png`, `/favicon.ico` | | ícone do app: microfone na cor `destaque-palco` sobre `palco`, do tema da festa; os PNGs saem do mesmo desenho (sharp) e também aparecem nas notificações |
@@ -469,6 +471,17 @@ Referência visual: `docs/design/` (formato do protótipo; ver o LEIA-ME de lá)
 - **Festa em preparação** (rascunho) e **Festa encerrada** (ranking final + agradecimento).
 - **Privacidade** (`/privacidade`): o texto de 7.1, acessível sem entrar na festa.
 
+### Telão (`/festa`)
+Página só de leitura para uma TV na horizontal (navegador da TV, Chromecast ou notebook no HDMI), sem cadastro nem cookie: usa as mesmas rotas públicas (`GET /api/festa`, `GET /api/estado` sem `kid`, `GET /api/ranking`), com o mesmo polling (10.1), e nunca mostra a parcial de votação aberta.
+- **Cabeçalho:** nome em destaque da festa e o filete do tema.
+- **Esquerda, Fila:** "Agora no palco" (título, artista, cantor; sem o código da música, que é do operador) e os próximos 10 com o total na fila. Palco vazio: "O palco está livre!".
+- **Direita, Ranking** (com a votação ligada): os 5 primeiros de Pessoas e os 5 de Performances (só Performances, até 8, com o ranking de pessoas desligado ou vazio), o 1º em destaque. Embaixo, "Votação aberta para {cantor}" enquanto houver.
+- **QR code** para entrar na festa, com o link escrito (sempre visível com a festa aberta; com a votação desligada, ocupa a coluna da direita).
+- **Mensagem de quem organiza** (9.3): faixa em destaque enquanto valer.
+- **Rascunho:** nome da festa e "Festa em preparação". **Encerrada:** "Obrigado!" e o ranking final (até 10 de cada).
+- Textos em tamanho de TV (proporcionais à largura da tela); um toque ou clique põe em tela cheia; a página pede para a tela não apagar (Wake Lock, quando o navegador permite).
+- O admin tem o link "Abrir telão" no menu Festa.
+
 ### Admin (`/admin`)
 - Sem PIN configurado: assistente de setup (seção 4).
 - Com festa: Operação (contadores, palco com Cantou/Pular e, com a máquina ligada (10.5), o estado da máquina e "Reenviar código", fila com ↑ ↓, Bypass, VIP, selos, convidados, adicionar pedido, "Mensagem para os convidados" (9.3)) e um menu Festa (editar dados, visual, catálogo, regras, QR, encerrar, arquivar).
@@ -515,3 +528,4 @@ Ver `README.md`. Variáveis de ambiente (`.env.example`): `PORT`, `PUBLIC_URL`, 
 - Gênero musical por artista, classificado pelo Claude com a chave de quem organiza, que nunca é guardada; ligar o filtro é escolha de quem organiza, depois de ver a precisão estimada (5.7).
 - Prêmio por Pix sem integração de pagamento: só a chave de quem organiza (9.2).
 - Avisos por Web Push com `node:crypto` em vez de biblioteca; no iPhone, só pela Tela de Início, com token de entrada para levar a identidade (9.3).
+- Telão entrou depois da v1 inicial, a pedido de quem organiza: só leitura, sem login, com os mesmos dados que qualquer convidado já vê (12).

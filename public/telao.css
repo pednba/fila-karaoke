@@ -1,0 +1,72 @@
+/* Telão (SPEC 12): tudo em em, proporcional à tela, para ler de longe numa TV na horizontal. */
+html { font-size: min(1.15vw, 2.05vh); } /* este arquivo só carrega no telão */
+body.telao { font-size: 1rem; height: 100vh; overflow: hidden; cursor: none; }
+.t-app { height: 100vh; display: flex; flex-direction: column; gap: 1.2em; padding: 1.4em 2em; }
+.t-centro { margin: auto; text-align: center; }
+.t-sec { color: var(--texto-2); font-size: 1em; }
+.t-rotulo { font-size: 0.8em; font-weight: 600; letter-spacing: 0.24em; text-transform: uppercase; }
+.t-cortar { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.telao .filete { gap: 0.6em; }
+.telao .filete .icone { width: 0.9em; height: 0.9em; }
+
+.t-topo { display: flex; align-items: center; gap: 1.2em; }
+.t-topo .destaque { font-size: 3.4em; white-space: nowrap; }
+.t-topo .filete { flex: 1; }
+.t-topo .t-sec { white-space: nowrap; }
+
+.t-corpo { flex: 1; min-height: 0; display: grid; grid-template-columns: 1.3fr 1fr; gap: 2em; }
+.t-coluna { min-height: 0; display: flex; flex-direction: column; gap: 1em; }
+.t-cabeca { display: flex; align-items: baseline; justify-content: space-between; gap: 1em; }
+.t-cabeca h2 { font-size: 1.1em; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; }
+
+/* Palco */
+.t-palco { background: var(--palco); color: var(--texto-palco); border: 1px solid var(--decor); border-radius: 1em; padding: 1.2em 1.6em; display: flex; flex-direction: column; gap: 0.6em; }
+.t-palco .t-rotulo { color: var(--destaque-palco); }
+.t-palco .filete::before, .t-palco .filete::after { background: var(--filete-palco); }
+.t-palco .filete .icone { fill: var(--destaque-palco); }
+.t-musica { font-size: 2.2em; font-weight: 700; line-height: 1.15; }
+.t-artista { font-size: 1.3em; color: var(--texto-palco-2); }
+.t-cantor { display: flex; align-items: center; gap: 0.5em; padding-top: 0.5em; border-top: 1px solid var(--divisa-palco); }
+.t-cantor svg { width: 2em; height: 2em; stroke: var(--destaque-palco); fill: none; stroke-width: 1.6; stroke-linecap: round; flex-shrink: 0; }
+.t-cantor .destaque { font-size: 3.4em; color: var(--destaque-palco); }
+.t-livre { font-size: 3em; text-align: center; padding: 0.4em 0; color: var(--destaque-palco); }
+
+/* Próximos: duas colunas de 5 */
+.t-proximos { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(5, auto); grid-auto-flow: column; gap: 0.6em 1em; }
+.t-item { display: flex; align-items: center; gap: 0.7em; padding: 0.55em 0.8em; background: var(--superficie); border: 1px solid var(--borda); border-radius: 0.7em; min-width: 0; }
+.t-num { width: 1.9em; height: 1.9em; flex-shrink: 0; border-radius: 50%; border: 1px solid var(--decor); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9em; }
+.t-item-nome { font-size: 1.15em; font-weight: 600; }
+.t-item-musica { font-size: 0.85em; color: var(--texto-2); }
+.t-vazio { padding: 1em; text-align: center; color: var(--texto-2); font-size: 1.2em; }
+
+/* Ranking */
+.t-ranking { display: flex; flex-direction: column; gap: 0.5em; }
+.t-rank { display: flex; align-items: center; gap: 0.8em; padding: 0.45em 0.9em; border-radius: 0.8em; background: var(--superficie); border: 1px solid var(--borda); min-width: 0; }
+.t-rank .t-num { font-size: 0.85em; }
+.t-rank .destaque { font-size: 1.9em; }
+.t-rank .t-item-musica { font-size: 0.8em; }
+.t-rank .t-valor { font-size: 1.6em; font-weight: 700; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.t-rank-topo { background: var(--palco); color: var(--texto-palco); border-color: var(--decor); }
+.t-rank-topo .t-num { background: var(--destaque-palco); color: var(--palco); border-color: var(--destaque-palco); }
+.t-rank-topo .t-item-musica { color: var(--texto-palco-2); }
+.t-rank-topo .t-valor { color: var(--destaque-palco); }
+.t-votacao { font-size: 0.9em; color: var(--texto-2); padding: 0.3em 0.2em; }
+
+/* QR para entrar */
+.t-qr { margin-top: auto; display: flex; align-items: center; gap: 1.2em; padding: 0.9em 1.2em; background: var(--superficie); border: 1px solid var(--decor); border-radius: 1em; }
+.t-qr .t-codigo { background: #fff; padding: 0.5em; border-radius: 0.5em; flex-shrink: 0; }
+.t-qr svg { display: block; width: 8.5em; height: 8.5em; }
+.t-qr .destaque { font-size: 2.4em; }
+.t-qr-grande { margin: auto 0; flex-direction: column; text-align: center; padding: 2em; }
+.t-qr-grande svg { width: 18em; height: 18em; }
+.t-link { font-size: 1.3em; font-weight: 600; overflow-wrap: anywhere; }
+
+/* Mensagem de quem organiza */
+.t-aviso { position: fixed; left: 50%; bottom: 1.6em; transform: translateX(-50%); max-width: 80vw; display: flex; align-items: center; gap: 0.8em; padding: 0.9em 1.8em; background: var(--palco); color: var(--texto-palco); border: 2px solid var(--destaque-palco); border-radius: 1em; box-shadow: 0 0.6em 2em rgb(0 0 0 / 0.35); }
+.t-aviso .icone { width: 1.6em; height: 1.6em; fill: var(--destaque-palco); }
+.t-aviso span { font-size: 2em; font-weight: 600; }
+
+/* Festa encerrada */
+.t-final { display: grid; grid-template-columns: 1fr 1fr; gap: 2em; flex: 1; min-height: 0; }
+.t-final .t-rank { padding: 0.35em 0.9em; }
+.t-final .t-rank .destaque { font-size: 1.6em; }

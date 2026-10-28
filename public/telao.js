@@ -1,0 +1,203 @@
+// Telão (SPEC 12): fila e ranking numa TV, só leitura, sem cadastro.
+import { $, esc, api, vigiar, icone, filete, definirIcone, plural, recarregarTema, MICROFONE } from './comum.js';
+
+const app = $('#app');
+const s = { festa: null, estado: null, qr: '', ranking: { versao: null, pessoas: [], performances: [] } };
+
+async function carregarFesta() {
+  s.festa = await api('GET', '/api/festa');
+  definirIcone(s.festa.tema?.icone);
+  document.title = `Telão · ${s.festa.titulo || 'Karaokê'}`;
+}
+
+async function carregarQr() {
+  try {
+    const res = await fetch('/api/festa/qr.svg');
+    if (res.ok) s.qr = await res.text();
+  } catch {
+    s.qr = '';
+  }
+}
+
+// Só ranking de votações fechadas (a parcial nunca sai pela API); ranking desligado vira lista vazia.
+async function lista(tipo) {
+  try {
+    return (await api('GET', `/api/ranking?tipo=${tipo}`)).ranking;
+  } catch {
+    return [];
+  }
+}
+
+async function carregarRanking() {
+  const { votacao, ranking_pessoas } = s.festa.regras;
+  if (!votacao || s.ranking.versao === s.estado.versao) return;
+  const [pessoas, performances] = await Promise.all([ranking_pessoas ? lista('pessoas') : [], lista('performances')]);
+  s.ranking = { versao: s.estado.versao, pessoas, performances };
+}
+
+async function aoEstado(estado) {
+  const mudouStatus = s.estado && s.estado.status !== estado.status;
+  s.estado = estado;
+  if (mudouStatus) {
+    await carregarFesta();
+    recarregarTema();
+  }
+  await carregarRanking();
+  render();
+}
+
+function topo() {
+  const f = s.festa;
+  return `
+    <header class="t-topo">
+      <span class="destaque">${esc(f.nome_destaque || f.titulo)}</span>
+      ${filete()}
+      ${s.estado.status === 'aberta' ? `<span class="t-sec">${plural(s.estado.total_fila, 'música na fila', 'músicas na fila')}</span>` : ''}
+    </header>`;
+}
+
+function palco() {
+  const a = s.estado.atual;
+  const conteudo = a
+    ? `
+      <div class="t-musica">${esc(a.titulo)}</div>
+      <div class="t-artista">${esc(a.artista)}</div>
+      <div class="t-cantor">${MICROFONE}<span class="destaque t-cortar">${esc(a.cantor)}</span></div>`
+    : '<p class="destaque t-livre">O palco está livre!</p>';
+  return `
+    <section class="t-palco" aria-label="Música da vez">
+      <div class="filete"><span class="t-rotulo">Agora no palco</span></div>
+      ${conteudo}
+    </section>`;
+}
+
+function proximos() {
+  const e = s.estado;
+  const itens = e.proximos.map((p, i) => `
+    <div class="t-item">
+      <span class="t-num">${i + 1}</span>
+      <div class="cresce" style="min-width: 0;">
+        <div class="t-item-nome t-cortar">${esc(p.cantor)}</div>
+        <div class="t-item-musica t-cortar">${esc(p.titulo)} · ${esc(p.artista)}</div>
+      </div>
+    </div>`).join('');
+  return `
+    <section class="t-coluna" style="gap: 0.6em;" aria-label="Próximos cantores">
+      <div class="t-cabeca"><h2>Próximos</h2></div>
+      ${itens ? `<div class="t-proximos">${itens}</div>` : '<p class="t-vazio">Ninguém na fila ainda. Peça sua música pelo celular!</p>'}
+    </section>`;
+}
+
+function linhaRank(r, i, tipo) {
+  const pessoas = tipo === 'pessoas';
+  return `
+    <div class="t-rank ${i === 0 ? 't-rank-topo' : ''}">
+      <span class="t-num">${r.posicao}</span>
+      <div class="cresce" style="min-width: 0;">
+        <div class="destaque t-cortar">${esc(pessoas ? r.nome : r.cantor)}</div>
+        <div class="t-item-musica t-cortar">${pessoas ? plural(r.n_performances, 'performance', 'performances') : `${esc(r.titulo)} · ${esc(r.artista)}`}</div>
+      </div>
+      <span class="t-valor">${esc(pessoas ? r.media_texto : r.nota_texto)}</span>
+    </div>`;
+}
+
+function blocoRank(titulo, itens, tipo, n) {
+  if (!itens.length) return '';
+  return `
+    <section class="t-ranking" aria-label="${titulo}">
+      <div class="t-cabeca"><h2>${titulo}</h2><span class="t-sec">${tipo === 'pessoas' ? 'média' : 'nota'}</span></div>
+      ${itens.slice(0, n).map((r, i) => linhaRank(r, i, tipo)).join('')}
+    </section>`;
+}
+
+function ranking() {
+  const { pessoas, performances } = s.ranking;
+  const votacoes = s.estado.votacoes.map((v) => `<p class="t-votacao">Votação aberta para ${esc(v.cantor)} · ${plural(v.n_votos, 'voto', 'votos')}. Vote pelo celular!</p>`).join('');
+  const blocos = pessoas.length
+    ? blocoRank('Ranking · Pessoas', pessoas, 'pessoas', 5) + blocoRank('Ranking · Performances', performances, 'performances', 5)
+    : blocoRank('Ranking · Performances', performances, 'performances', 8);
+  return `
+    ${blocos || '<section class="t-ranking"><div class="t-cabeca"><h2>Ranking</h2></div><p class="t-vazio">O ranking aparece quando a primeira votação fechar.</p></section>'}
+    ${votacoes}`;
+}
+
+function qr(grande = false) {
+  if (!s.qr) return '';
+  return `
+    <section class="t-qr ${grande ? 't-qr-grande' : ''}" aria-label="Entrar na festa">
+      <div class="t-codigo">${s.qr}</div>
+      <div class="pilha" style="gap: 0.3em;">
+        <span class="destaque">Peça sua música!</span>
+        <span class="t-sec">Aponte a câmera do celular ou acesse</span>
+        <span class="t-link">${esc(location.host)}</span>
+      </div>
+    </section>`;
+}
+
+function aviso() {
+  const a = s.estado.aviso;
+  return a ? `<div class="t-aviso" role="status">${icone()}<span>${esc(a.texto)}</span></div>` : '';
+}
+
+function render() {
+  const status = s.estado.status;
+  if (status === 'rascunho') {
+    app.innerHTML = `
+      <div class="t-centro pilha" style="align-items: center; gap: 1em;">
+        <span class="destaque" style="font-size: 6em;">${esc(s.festa.nome_destaque || s.festa.titulo)}</span>
+        ${filete()}
+        <span class="t-rotulo" style="font-size: 1.4em;">Festa em preparação</span>
+      </div>`;
+    return;
+  }
+  if (status === 'encerrada') {
+    const { pessoas, performances } = s.ranking;
+    app.innerHTML = `
+      ${topo()}
+      <div class="t-centro" style="margin: 0 auto;"><span class="destaque" style="font-size: 5em;">Obrigado!</span></div>
+      ${s.festa.regras.votacao && (pessoas.length || performances.length) ? `
+        <div class="t-final">
+          ${pessoas.length ? `<div class="t-coluna">${blocoRank('Ranking final · Pessoas', pessoas, 'pessoas', 10)}</div>` : ''}
+          <div class="t-coluna">${blocoRank('Ranking final · Performances', performances, 'performances', 10)}</div>
+        </div>` : '<p class="t-centro t-sec" style="font-size: 1.6em;">A festa terminou.</p>'}`;
+    return;
+  }
+  app.innerHTML = `
+    ${topo()}
+    <main class="t-corpo">
+      <div class="t-coluna">${palco()}${proximos()}</div>
+      <div class="t-coluna">${s.festa.regras.votacao ? ranking() + qr() : qr(true)}</div>
+    </main>
+    ${aviso()}`;
+}
+
+// Tela cheia no primeiro toque; tela acesa enquanto a página estiver visível.
+let trava = null;
+async function manterAcesa() {
+  if (trava && !trava.released) return;
+  try {
+    trava = await navigator.wakeLock?.request('screen');
+  } catch {
+    trava = null;
+  }
+}
+document.addEventListener('click', () => {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {});
+  manterAcesa();
+});
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) manterAcesa();
+});
+
+async function iniciar() {
+  try {
+    await Promise.all([carregarFesta(), carregarQr()]);
+  } catch {
+    app.innerHTML = '<p class="t-centro t-sec">Não deu para carregar a festa. Tentando de novo…</p>';
+    setTimeout(iniciar, 5000);
+    return;
+  }
+  manterAcesa();
+  vigiar('/api/estado', aoEstado);
+}
+iniciar();

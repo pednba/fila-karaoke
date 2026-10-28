@@ -295,6 +295,13 @@ function renderFesta() {
         </div>
         <span aria-hidden="true">›</span>
       </a>`).join('')}
+    <a class="item" style="text-decoration: none;" href="/festa" target="_blank" rel="noopener">
+      <div class="cresce">
+        <div class="titulo-item">Abrir telão</div>
+        <div class="sec">Fila e ranking para uma TV: abra no navegador da TV ou do notebook ligado nela</div>
+      </div>
+      <span aria-hidden="true">↗</span>
+    </a>
     ${st === 'aberta' ? `
       <section class="cartao pilha" style="margin-top: 8px;">
         <h2 class="rotulo" style="font-size: 13px;">Encerrar festa</h2>

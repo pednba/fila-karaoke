@@ -83,7 +83,7 @@ function palco() {
 }
 
 // Uma linha por cantor; quantos couberem (cortar() esconde os que passariam da tela).
-// O pedido mais recente fecha a lista com a posição real, para quem acabou de pedir se ver no telão.
+// Os pedidos mais recentes fecham a lista com a posição real, para quem acabou de pedir se ver no telão.
 function proximos() {
   const linha = (p, n, extra = '') => `
     <div class="t-item" data-id="${p.id}" ${extra}>
@@ -91,9 +91,8 @@ function proximos() {
       <span class="t-item-nome t-cortar">${esc(p.cantor)}</span>
       <span class="t-item-musica t-cortar">${esc(p.titulo)}</span>
     </div>`;
-  const ultimo = s.estado.ultimo_pedido;
   const itens = s.estado.proximos.map((p, i) => linha(p, i + 1)).join('')
-    + (ultimo ? linha(ultimo, ultimo.posicao, 'data-fixo') : '');
+    + (s.estado.recentes || []).map((p) => linha(p, p.posicao, 'data-fixo')).join('');
   return `
     <section class="t-coluna t-lista" aria-label="Próximos cantores">
       <div class="t-cabeca"><h2>Próximos</h2></div>
@@ -119,23 +118,34 @@ function baixo() {
 }
 
 // Esconde os itens que não cabem inteiros na altura disponível.
-// Um item data-fixo só aparece se o mesmo pedido ficou escondido, e aí toma o lugar do último visível.
+// Itens data-fixo (pedidos recentes) só aparecem se o mesmo pedido ficou escondido, e aí tomam o lugar
+// dos últimos visíveis; o topo da fila nunca fica com menos de MINIMO_TOPO.
+const MINIMO_TOPO = 2;
 function cortar() {
   for (const lista of app.querySelectorAll('[data-cortar]')) {
     const limite = lista.getBoundingClientRect().bottom;
-    const fixo = lista.querySelector('[data-fixo]');
-    const itens = [...lista.children].filter((item) => item !== fixo);
+    const passa = (item) => item.getBoundingClientRect().bottom > limite + 1;
+    const fixos = [...lista.querySelectorAll('[data-fixo]')];
+    const itens = [...lista.children].filter((item) => !fixos.includes(item));
     let cabe = true;
     for (const item of lista.children) item.hidden = false;
-    if (fixo) fixo.hidden = true;
+    for (const fixo of fixos) fixo.hidden = true;
     for (const item of itens) {
-      cabe = cabe && item.getBoundingClientRect().bottom <= limite + 1;
+      cabe = cabe && !passa(item);
       item.hidden = !cabe;
     }
-    if (!fixo || itens.some((item) => !item.hidden && item.dataset.id === fixo.dataset.id)) continue;
-    fixo.hidden = false;
+    if (!fixos.length) continue;
+    const mostrarFixos = () => {
+      const visiveis = new Set(itens.filter((item) => !item.hidden).map((item) => item.dataset.id));
+      for (const fixo of fixos) fixo.hidden = visiveis.has(fixo.dataset.id);
+    };
+    mostrarFixos();
     const visiveis = itens.filter((item) => !item.hidden);
-    while (visiveis.length && fixo.getBoundingClientRect().bottom > limite + 1) visiveis.pop().hidden = true;
+    while (visiveis.length > MINIMO_TOPO && fixos.some((f) => !f.hidden && passa(f))) {
+      visiveis.pop().hidden = true;
+      mostrarFixos();
+    }
+    for (const fixo of fixos) if (!fixo.hidden && passa(fixo)) fixo.hidden = true;
   }
 }
 addEventListener('resize', cortar);

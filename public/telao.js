@@ -133,10 +133,8 @@ function linhaRank(r, i, tipo) {
   return `
     <div class="t-rank ${i === 0 ? 't-rank-topo' : ''}">
       <span class="t-num">${r.posicao}</span>
-      <div class="cresce" style="min-width: 0;">
-        <div class="destaque t-cortar">${esc(pessoas ? r.nome : r.cantor)}</div>
-        <div class="t-item-musica t-cortar">${pessoas ? plural(r.n_performances, 'performance', 'performances') : `${esc(r.titulo)} · ${esc(r.artista)}`}</div>
-      </div>
+      <span class="destaque t-cortar t-rank-nome">${esc(pessoas ? r.nome : r.cantor)}</span>
+      <span class="t-item-musica t-cortar cresce">${pessoas ? plural(r.n_performances, 'performance', 'performances') : `${esc(r.titulo)} · ${esc(r.artista)}`}</span>
       <span class="t-valor">${esc(pessoas ? r.media_texto : r.nota_texto)}</span>
     </div>`;
 }
@@ -152,7 +150,8 @@ function blocoRank(titulo, itens, tipo, n) {
 
 function ranking() {
   const { pessoas, performances } = s.ranking;
-  const votacoes = s.estado.votacoes.map((v) => `<p class="t-votacao">Votação aberta para ${esc(v.cantor)} · ${plural(v.n_votos, 'voto', 'votos')}. Vote pelo celular!</p>`).join('');
+  const abertas = s.estado.votacoes.map((v) => `${esc(v.cantor)} (${plural(v.n_votos, 'voto', 'votos')})`);
+  const votacoes = abertas.length ? `<p class="t-votacao t-cortar">Votação aberta para ${abertas.join(' e ')}. Vote pelo celular!</p>` : '';
   const blocos = pessoas.length
     ? blocoRank('Ranking · Pessoas', pessoas, 'pessoas', 5) + blocoRank('Ranking · Performances', performances, 'performances', 5)
     : blocoRank('Ranking · Performances', performances, 'performances', 8);

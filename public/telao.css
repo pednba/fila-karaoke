@@ -14,7 +14,7 @@ body.telao { font-size: 1rem; height: 100vh; overflow: hidden; cursor: none; }
 .t-topo .filete { flex: 1; }
 .t-topo .t-sec { white-space: nowrap; }
 
-.t-corpo { flex: 1; min-height: 0; display: grid; grid-template-columns: 1.3fr 1fr; gap: 2em; }
+.t-corpo { flex: 1; min-height: 0; display: grid; grid-template-columns: 1.3fr 1fr; grid-template-rows: minmax(0, 1fr); gap: 2em; }
 .t-corpo-um { grid-template-columns: 1fr; }
 .t-coluna { min-height: 0; display: flex; flex-direction: column; gap: 1em; }
 .t-cabeca { display: flex; align-items: baseline; justify-content: space-between; gap: 1em; }
@@ -55,16 +55,17 @@ body.telao { font-size: 1rem; height: 100vh; overflow: hidden; cursor: none; }
 .t-rankings { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 1em; }
 .t-ranking { flex: 0 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 0.5em; }
 .t-ranking > [data-cortar] { min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 0.5em; }
-.t-rank { display: flex; align-items: center; gap: 0.8em; padding: 0.45em 0.9em; border-radius: 0.8em; background: var(--superficie); border: 1px solid var(--borda); min-width: 0; }
+.t-rank { display: flex; align-items: center; gap: 0.8em; padding: 0.3em 0.9em; flex-shrink: 0; border-radius: 0.8em; background: var(--superficie); border: 1px solid var(--borda); min-width: 0; }
 .t-rank .t-num { font-size: 0.85em; }
-.t-rank .destaque { font-size: 1.9em; }
-.t-rank .t-item-musica { font-size: 0.8em; }
+.t-rank .destaque { font-size: 1.7em; }
+.t-rank-nome { flex-shrink: 0; max-width: 50%; }
+.t-rank .t-item-musica { font-size: 0.85em; min-width: 0; }
 .t-rank .t-valor { font-size: 1.6em; font-weight: 700; font-variant-numeric: tabular-nums; flex-shrink: 0; }
 .t-rank-topo { background: var(--palco); color: var(--texto-palco); border-color: var(--decor); }
 .t-rank-topo .t-num { background: var(--destaque-palco); color: var(--palco); border-color: var(--destaque-palco); }
 .t-rank-topo .t-item-musica { color: var(--texto-palco-2); }
 .t-rank-topo .t-valor { color: var(--destaque-palco); }
-.t-votacao { font-size: 0.9em; color: var(--texto-2); padding: 0.3em 0.2em; }
+.t-votacao { flex-shrink: 0; margin: 0; font-size: 0.9em; color: var(--texto-2); padding: 0.3em 0.2em; }
 
 /* QR para entrar */
 .t-qr { flex-shrink: 0; margin-top: auto; display: flex; align-items: center; gap: 1.2em; padding: 0.9em 1.2em; background: var(--superficie); border: 1px solid var(--decor); border-radius: 1em; }

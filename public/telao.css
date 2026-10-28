@@ -7,7 +7,7 @@ body.telao { font-size: 1rem; height: 100vh; overflow: hidden; cursor: none; }
 .t-rotulo { font-size: 0.8em; font-weight: 600; letter-spacing: 0.24em; text-transform: uppercase; }
 .t-cortar { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Fontes manuscritas passam da caixa (hastes e voltas): folga por dentro, compensada por fora, para o corte não comer a letra. */
-.destaque.t-cortar { padding: 0.25em 0.4em 0.25em 0.2em; margin: -0.25em -0.4em -0.25em -0.2em; }
+.destaque.t-cortar { padding: 0.45em 0.4em 0.2em 0.2em; margin: -0.45em -0.4em -0.2em -0.2em; }
 .telao .filete { gap: 0.6em; }
 .telao .filete .icone { width: 0.9em; height: 0.9em; }
 
@@ -59,7 +59,7 @@ body.telao { font-size: 1rem; height: 100vh; overflow: hidden; cursor: none; }
 .t-ranking > [data-cortar] { min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 0.5em; }
 .t-rank { display: flex; align-items: center; gap: 0.8em; padding: 0.3em 0.9em; flex-shrink: 0; border-radius: 0.8em; background: var(--superficie); border: 1px solid var(--borda); min-width: 0; }
 .t-rank .t-num { font-size: 0.85em; }
-.t-rank .destaque { font-size: 1.7em; }
+.t-rank .destaque { font-size: 1.7em; position: relative; top: 0.12em; }
 .t-rank-nome { flex-shrink: 0; max-width: 50%; }
 .t-rank .t-item-musica { font-size: 0.85em; min-width: 0; }
 .t-rank .t-valor { font-size: 1.6em; font-weight: 700; font-variant-numeric: tabular-nums; flex-shrink: 0; }

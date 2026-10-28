@@ -144,17 +144,18 @@ function recadoNovo(m) {
   return em && Date.now() - em < RECADO_NOVO_MS;
 }
 
-// Hora do recado (hh:mm:ss, 24 h) no fuso do início da festa ("…-03:00"); sem início, no fuso da TV.
+// Hora do recado (h:mm:ss AM/PM, 12 h) no fuso do início da festa ("…-03:00"); sem início, no fuso da TV.
 // criado_em vem do SQLite em UTC sem fuso: "2026-11-02 21:00:00".
 function horaRecado(criado_em) {
   const d = new Date(criado_em.replace(' ', 'T') + 'Z');
   if (Number.isNaN(d.getTime())) return '';
   const fuso = /([+-])(\d{2}):(\d{2})$/.exec(s.festa.inicio_em || '');
   const dois = (n) => String(n).padStart(2, '0');
-  if (!fuso) return `${dois(d.getHours())}:${dois(d.getMinutes())}:${dois(d.getSeconds())}`;
+  const doze = (h, m, s) => `${h % 12 || 12}:${dois(m)}:${dois(s)} ${h < 12 ? 'AM' : 'PM'}`;
+  if (!fuso) return doze(d.getHours(), d.getMinutes(), d.getSeconds());
   const desloc = (fuso[1] === '-' ? -1 : 1) * (Number(fuso[2]) * 60 + Number(fuso[3]));
   const l = new Date(d.getTime() + desloc * 60000);
-  return `${dois(l.getUTCHours())}:${dois(l.getUTCMinutes())}:${dois(l.getUTCSeconds())}`;
+  return doze(l.getUTCHours(), l.getUTCMinutes(), l.getUTCSeconds());
 }
 
 function recados() {

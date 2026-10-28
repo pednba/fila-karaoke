@@ -87,7 +87,7 @@ function festaAberta() {
   garantirFesta(db);
   const musicas = ['1001', '1002', '1003'].map((cod) => ({ cod, titulo: `M${cod}`, artista: 'X', inicio: '', idioma: 'BRA' }));
   gravarCatalogo(db, { musicas: prepararMusicas(musicas), origem: 'teste', statusFesta: 'rascunho' });
-  db.prepare("UPDATE festa SET status = 'aberta', titulo = 'Festa Teste', admin_pin_hash = ? WHERE id = 1").run(hashPin('1234'));
+  db.prepare("UPDATE festa SET status = 'aberta', titulo = 'Festa Teste', nome_destaque = 'Aniversariante', admin_pin_hash = ? WHERE id = 1").run(hashPin('1234'));
   for (const nome of ['Ana', 'Bia', 'Caio']) db.prepare('INSERT INTO pessoas (id, nome, nome_norm) VALUES (?, ?, ?)').run(nome, nome, nome.toLowerCase());
   return db;
 }
@@ -127,7 +127,7 @@ test('"sua música é a próxima": uma vez por pedido, de novo depois de pulado;
   assert.equal(r.url, ENDPOINT);
   assert.equal(r.headers['Content-Encoding'], 'aes128gcm');
   assert.match(r.headers.Authorization, /^vapid t=/);
-  assert.deepEqual(JSON.parse(decifrar(r.body, navBia)), { titulo: 'Festa Teste', corpo: 'Bia, sua música “M1002” é a próxima!', tag: `proxima-${db.prepare("SELECT id FROM pedidos WHERE pessoa_id = 'Bia'").pluck().get()}` });
+  assert.deepEqual(JSON.parse(decifrar(r.body, navBia)), { titulo: 'Aniversariante', corpo: 'Bia, sua música “M1002” é a próxima!', tag: `proxima-${db.prepare("SELECT id FROM pedidos WHERE pessoa_id = 'Bia'").pluck().get()}` });
 
   escrever(db, () => pedir(db, { pessoa_id: 'Caio', musica_cod: '1003' }));
   await push.verificarProxima();

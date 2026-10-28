@@ -135,7 +135,10 @@ export function criarPush({ db, config }) {
     ? db.prepare('SELECT endpoint, p256dh, auth FROM inscricoes_push WHERE pessoa_id = ?').all(pessoa_id)
     : db.prepare('SELECT endpoint, p256dh, auth FROM inscricoes_push').all();
 
-  const titulo = () => lerFesta(db).titulo || 'Karaokê';
+  const titulo = () => {
+    const festa = lerFesta(db);
+    return festa.nome_destaque || festa.titulo || 'Karaokê';
+  };
 
   return {
     ativo,

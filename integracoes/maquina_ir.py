@@ -149,7 +149,8 @@ class Tuya:
         for versao in VERSOES_TUYA:
             estado = tinytuya.Device(aparelho['id'], ip, aparelho['key'], version=float(versao),
                                     connection_retry_limit=1, connection_retry_delay=1).status()
-            if isinstance(estado, dict) and 'dps' in estado:
+            # Hub IR costuma responder sem estado (None); só 'Error' indica versão, chave ou rede erradas.
+            if estado is None or (isinstance(estado, dict) and 'Error' not in estado):
                 log(f'  respondeu em {ip} com a versão {versao}. Ponha "tuya_versao": "{versao}" se não for a do devices.json.')
                 return
         log(f'  não respondeu em {ip} com nenhuma versão ({", ".join(VERSOES_TUYA)}). Confira o IP e a chave.')

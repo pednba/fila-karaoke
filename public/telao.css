@@ -7,7 +7,7 @@ body.telao { font-size: 1rem; height: 100vh; overflow: hidden; cursor: none; }
 .t-rotulo { font-size: 0.8em; font-weight: 600; letter-spacing: 0.24em; text-transform: uppercase; }
 .t-cortar { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Fontes manuscritas passam da caixa (hastes e voltas): folga por dentro, compensada por fora, para o corte não comer a letra. */
-.destaque.t-cortar { padding: 0.2em 0.25em 0.2em 0.1em; margin: -0.2em -0.25em -0.2em -0.1em; }
+.destaque.t-cortar { padding: 0.25em 0.4em 0.25em 0.2em; margin: -0.25em -0.4em -0.25em -0.2em; }
 .telao .filete { gap: 0.6em; }
 .telao .filete .icone { width: 0.9em; height: 0.9em; }
 

@@ -339,6 +339,7 @@ Toda escrita incrementa `meta.versao`.
 - Ao encerrar a festa, o app envia em segundo plano para cada pessoa com e-mail: a colocação dela no ranking de pessoas (se estiver nele), os 10 primeiros de Pessoas e de Performances e o link da festa. Assunto: "Ranking final · {título}".
 - Enviou, apaga o e-mail. Falhou, o e-mail fica e o envio é tentado de novo quando o app reinicia com a festa encerrada. Arquivar a festa apaga os e-mails restantes antes do backup.
 - O admin não vê os e-mails.
+- O HTML segue o visual da tela de festa encerrada (12): "Obrigado!", a arte, os rankings em cartões com o 1º em destaque, nas cores, fonte e ícone do tema; fontes e arte vêm do próprio servidor (sem elas, o programa de e-mail usa uma fonte do sistema). Rodapés centralizados.
 - Rodapé extra opcional: `SMTP_RODAPE` no `.env` (texto livre de quem hospeda o app). Se preenchido, aparece no fim do e-mail, depois do aviso de que o endereço foi apagado.
 
 ### 9.2 Prêmio por Pix

@@ -32,7 +32,14 @@ test('montarEmailRanking traz a colocação da pessoa e os rankings', () => {
   assert.doesNotMatch(sem.html, /Feito por/);
   const com = montarEmailRanking({ festa, link: 'https://k.exemplo/', nome: 'Caio', pessoas: null, performances: [], rodapeExtra: 'Feito por <Fulano> · fulano.exemplo' });
   assert.match(com.texto, /apagado depois do envio\.\n\nFeito por <Fulano> · fulano\.exemplo$/);
-  assert.match(com.html, /Feito por &lt;Fulano&gt; · fulano\.exemplo/);
+  assert.match(com.html, /text-align: center;[^>]*>Feito por &lt;Fulano&gt; · fulano\.exemplo/);
+  // Visual da tela de encerrada, com as cores do tema (padrão quando a festa não tem tema).
+  assert.match(e.html, /Obrigado!/);
+  assert.match(e.html, /background: #16130F/);
+  const tema = montarEmailRanking({ festa: { ...festa, tema: { fonte: 'Pacifico', icone: 'estrela', tokens: { palco: '#102030' } } }, link: 'https://k.exemplo/', nome: 'Ana', pessoas, performances });
+  assert.match(tema.html, /background: #102030/);
+  assert.match(tema.html, /'Pacifico'/);
+  assert.match(tema.html, /https:\/\/k\.exemplo\/fontes\/pacifico-latin\.woff2/);
 });
 
 function festaEncerrada() {

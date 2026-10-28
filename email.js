@@ -23,7 +23,7 @@ export function transporteSmtp({ host, port, user, pass }) {
 const escHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
 // Função pura: monta assunto, texto e HTML para uma pessoa.
-export function montarEmailRanking({ festa, link, nome, pessoas, performances }) {
+export function montarEmailRanking({ festa, link, nome, pessoas, performances, rodapeExtra = '' }) {
   const titulo = festa.titulo || festa.nome_destaque;
   const minha = pessoas?.find((p) => p.nome === nome);
   const linhasPessoas = (pessoas ?? []).slice(0, TOPO).map((p, i) => `${i + 1}. ${p.nome} · média ${formatarNota(p.media)}`);
@@ -43,6 +43,7 @@ export function montarEmailRanking({ festa, link, nome, pessoas, performances })
     ...secoes.map(([nomeSecao, linhas]) => `${nomeSecao}\n${linhas.length ? linhas.join('\n') : vazio}`),
     `Ranking completo: ${link}`,
     rodape,
+    rodapeExtra,
   ].filter(Boolean).join('\n\n');
 
   const html = `<div style="font-family: sans-serif; line-height: 1.5; max-width: 560px;">
@@ -52,6 +53,7 @@ ${destaque ? `<p><strong>${escHtml(destaque)}</strong></p>` : ''}
 ${secoes.map(([nomeSecao, linhas]) => `<h3>${nomeSecao}</h3>${linhas.length ? `<ol>${linhas.map((l) => `<li>${escHtml(l.replace(/^\d+\. /, ''))}</li>`).join('')}</ol>` : `<p>${vazio}</p>`}`).join('\n')}
 <p><a href="${escHtml(link)}">Ver o ranking completo</a></p>
 <p style="font-size: 12px; color: #777;">${rodape}</p>
+${rodapeExtra ? `<p style="font-size: 12px; color: #777;">${escHtml(rodapeExtra)}</p>` : ''}
 </div>`;
 
   return { assunto: `Ranking final · ${titulo}`, texto, html };
@@ -59,7 +61,7 @@ ${secoes.map(([nomeSecao, linhas]) => `<h3>${nomeSecao}</h3>${linhas.length ? `<
 
 // Envia para todo mundo que deixou e-mail e ainda não recebeu. Falha de um não para os outros;
 // o e-mail de quem falhou fica guardado para a próxima tentativa (ao reiniciar o app).
-export function criarEnvioRanking({ db, transporte, de, link }) {
+export function criarEnvioRanking({ db, transporte, de, link, rodapeExtra }) {
   let rodando = null;
 
   async function enviar() {
@@ -72,7 +74,7 @@ export function criarEnvioRanking({ db, transporte, de, link }) {
     let enviados = 0;
     let falhas = 0;
     for (const p of pendentes) {
-      const { assunto, texto, html } = montarEmailRanking({ festa, link, nome: p.nome, pessoas, performances });
+      const { assunto, texto, html } = montarEmailRanking({ festa, link, nome: p.nome, pessoas, performances, rodapeExtra });
       try {
         await transporte.sendMail({ from: de, to: p.email, subject: assunto, text: texto, html });
         escrever(db, () => db.prepare('UPDATE pessoas SET email = NULL WHERE id = ?').run(p.id));

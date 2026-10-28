@@ -17,6 +17,7 @@ const config = {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
     de: process.env.SMTP_FROM || process.env.SMTP_USER,
+    rodape: process.env.SMTP_RODAPE || '',
   },
   // Máquina de karaokê por infravermelho (opcional, SPEC 10.5).
   maquinaToken: process.env.MAQUINA_TOKEN || null,

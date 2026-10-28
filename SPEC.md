@@ -319,6 +319,7 @@ Toda escrita incrementa `meta.versao`.
 - Ao encerrar a festa, o app envia em segundo plano para cada pessoa com e-mail: a colocação dela no ranking de pessoas (se estiver nele), os 10 primeiros de Pessoas e de Performances e o link da festa. Assunto: "Ranking final · {título}".
 - Enviou, apaga o e-mail. Falhou, o e-mail fica e o envio é tentado de novo quando o app reinicia com a festa encerrada. Arquivar a festa apaga os e-mails restantes antes do backup.
 - O admin não vê os e-mails.
+- Rodapé extra opcional: `SMTP_RODAPE` no `.env` (texto livre de quem hospeda o app). Se preenchido, aparece no fim do e-mail, depois do aviso de que o endereço foi apagado.
 
 ### 9.2 Prêmio por Pix
 - Com a votação ligada, a festa aberta e a chave Pix preenchida no passo 2, a aba Ranking mostra um cartão "Prêmio de quem ganhar": quem quiser contribuir faz um Pix para quem organiza, que repassa a quem ganhar. Mostra a chave e um botão "Copiar".
@@ -436,7 +437,7 @@ Referência visual: `docs/design/` (formato do protótipo; ver o LEIA-ME de lá)
 
 ## 13. Instalação
 
-Ver `README.md`. Variáveis de ambiente (`.env.example`): `PORT`, `PUBLIC_URL`, `SETUP_TOKEN`, `COOKIE_SECRET`, `DATA_DIR`; opcionais `SMTP_*` (9.1) e `MAQUINA_TOKEN` (10.5).
+Ver `README.md`. Variáveis de ambiente (`.env.example`): `PORT`, `PUBLIC_URL`, `SETUP_TOKEN`, `COOKIE_SECRET`, `DATA_DIR`; opcionais `SMTP_*` e `SMTP_RODAPE` (9.1) e `MAQUINA_TOKEN` (10.5).
 
 ## 14. Testes obrigatórios
 

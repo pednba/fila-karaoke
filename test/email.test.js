@@ -29,6 +29,10 @@ test('montarEmailRanking traz a colocação da pessoa e os rankings', () => {
   const sem = montarEmailRanking({ festa, link: 'https://k.exemplo/', nome: 'Caio', pessoas: null, performances: [] });
   assert.doesNotMatch(sem.texto, /lugar|Pessoas/);
   assert.match(sem.texto, /Nenhuma votação fechada/);
+  assert.doesNotMatch(sem.html, /Feito por/);
+  const com = montarEmailRanking({ festa, link: 'https://k.exemplo/', nome: 'Caio', pessoas: null, performances: [], rodapeExtra: 'Feito por <Fulano> · fulano.exemplo' });
+  assert.match(com.texto, /apagado depois do envio\.\n\nFeito por <Fulano> · fulano\.exemplo$/);
+  assert.match(com.html, /Feito por &lt;Fulano&gt; · fulano\.exemplo/);
 });
 
 function festaEncerrada() {

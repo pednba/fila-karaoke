@@ -21,6 +21,7 @@ export function criarApp({ db, config }) {
     db,
     transporte: config.transporteEmail ?? (config.smtp ? transporteSmtp(config.smtp) : null),
     de: config.smtp?.de,
+    rodapeExtra: config.smtp?.rodape,
     link: new URL('/', config.publicUrl).href,
   });
   // Se o app caiu no meio de um envio, termina ao subir de novo.

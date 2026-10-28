@@ -83,16 +83,19 @@ function palco() {
 }
 
 // Uma linha por cantor; quantos couberem (cortar() esconde os que passariam da tela).
-// Os pedidos mais recentes fecham a lista com a posição real, para quem acabou de pedir se ver no telão.
+// Os pedidos mais recentes fecham a lista com a posição real, para quem acabou de pedir se ver no telão;
+// onde estiverem (no topo ou no fim), ganham o fundo de realce.
 function proximos() {
+  const recentes = s.estado.recentes || [];
+  const ids = new Set(recentes.map((p) => p.id));
   const linha = (p, n, extra = '') => `
-    <div class="t-item" data-id="${p.id}" ${extra}>
+    <div class="t-item ${ids.has(p.id) ? 't-recente' : ''}" data-id="${p.id}" ${extra}>
       <span class="t-num">${n}</span>
       <span class="t-item-nome t-cortar">${esc(p.cantor)}</span>
       <span class="t-item-musica t-cortar">${esc(p.titulo)}</span>
     </div>`;
   const itens = s.estado.proximos.map((p, i) => linha(p, i + 1)).join('')
-    + (s.estado.recentes || []).map((p) => linha(p, p.posicao, 'data-fixo')).join('');
+    + recentes.map((p) => linha(p, p.posicao, 'data-fixo')).join('');
   return `
     <section class="t-coluna t-lista" aria-label="Próximos cantores">
       <div class="t-cabeca"><h2>Próximos</h2>${novoPedido()}</div>

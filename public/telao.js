@@ -2,6 +2,7 @@
 import { $, esc, api, vigiar, icone, filete, definirIcone, plural, recarregarTema, MICROFONE } from './comum.js';
 
 const app = $('#app');
+window.telaoCarregou = true; // telao-diag.js: o navegador conseguiu rodar o telão
 const s = { festa: null, estado: null, qr: '', ranking: { versao: null, pessoas: [], performances: [] }, recados: { versao: null, lista: [] } };
 
 async function carregarFesta() {

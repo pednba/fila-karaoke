@@ -36,7 +36,7 @@ test('páginas do front são servidas como HTML, com e sem extensão', async () 
     assert.match(res.headers.get('content-type'), /text\/html/, rota);
     assert.match(await res.text(), /<html lang="pt-BR">/, rota);
   }
-  for (const arquivo of ['/estilo.css', '/comum.js', '/convidado.js', '/admin.js', '/setup.js', '/privacidade.js', '/avisos.js', '/sw.js', '/telao.js', '/telao.css']) {
+  for (const arquivo of ['/estilo.css', '/comum.js', '/convidado.js', '/admin.js', '/setup.js', '/privacidade.js', '/avisos.js', '/sw.js', '/telao.js', '/telao.css', '/telao-diag.js']) {
     assert.equal((await fetch(base + arquivo)).status, 200, arquivo);
   }
 });

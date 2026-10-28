@@ -498,6 +498,7 @@ Página só de leitura para uma TV na horizontal (navegador da TV, Chromecast ou
 - **Mensagem de quem organiza** (9.3): faixa em destaque por 15 minutos.
 - **Rascunho:** nome da festa e "Festa em preparação". **Encerrada:** "Obrigado!" e o ranking final (até 10 de cada).
 - Textos em tamanho de TV (proporcionais à largura da tela); um toque ou clique põe em tela cheia; a página pede para a tela não apagar (Wake Lock, quando o navegador permite).
+- Navegador antigo demais (sem módulos JavaScript ou que não consegue rodar o telão em 10 segundos): a tela diz "Este navegador não consegue abrir o telão.", sugere um notebook no HDMI ou outro aparelho e mostra a identificação do navegador, para quem organiza saber qual é.
 - O admin tem o link "Abrir telão" no menu Festa.
 
 ### Admin (`/admin`)
